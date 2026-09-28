@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useState} from "react";
 
 type Offer={id:number;title:string;marketplace:string;price:number};
-type Task={id:number;offer_id:number;channel:string;status:string;cycle_date:string;scheduled_at:string|null;title:string;price:number;marketplace:string;last_error:string|null};
+type Task={id:number;offer_id:number;channel:string;status:string;cycle_date:string;scheduled_at:string|null;title:string;price:number;marketplace:string;last_error:string|null;attempts:number};
 const channels=[["pinterest","Pinterest"],["instagram","Instagram"],["facebook","Facebook"],["telegram","Telegram"],["whatsapp","WhatsApp"],["tiktok","TikTok"]] as const;
 const labels:Record<string,string>=Object.fromEntries(channels);
 const states:Record<string,string>={ready:"Pronto",scheduled:"Agendado",publishing:"Enviando",published:"Concluído",failed:"Falhou",skipped:"Ignorado"};
@@ -26,6 +26,12 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
     setBusy(true);setMessage("");
     try{const r=await fetch("/api/publication-tasks",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||"Falha ao atualizar fila");await reload();setMessage(body.action==="enqueue"?"Item incluído na fila.":"Estado atualizado.")}
     catch(e:any){setMessage(e?.message||"Falha ao atualizar fila")}
+    finally{setBusy(false)}
+  }
+  async function remove(t:Task){
+    setBusy(true);setMessage("");
+    try{const r=await fetch("/api/publication-tasks",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:t.id})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Falha ao remover item");await reload();setMessage("Item removido da fila.")}
+    catch(e:any){setMessage(e?.message||"Falha ao remover item")}
     finally{setBusy(false)}
   }
   async function copy(t:Task){try{await navigator.clipboard.writeText(`${location.origin}/go/${t.offer_id}?channel=${t.channel}`);setMessage("Link rastreado copiado.")}catch{setMessage("Não foi possível copiar o link.")}}
@@ -64,6 +70,7 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
         {t.status!=="published"&&<button className="mini publish" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"published"})}>Marcar concluído</button>}
         {t.status!=="skipped"&&t.status!=="published"&&<button className="mini secondaryMini" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"skipped"})}>Ignorar</button>}
         {["published","skipped","failed"].includes(t.status)&&<button className="mini secondaryMini" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"ready"})}>Reabrir</button>}
+        {t.attempts===0&&["ready","scheduled","skipped"].includes(t.status)&&<button className="mini secondaryMini" disabled={busy} onClick={()=>remove(t)}>Remover</button>}
       </div>
     </article>)}</div>}
   </section>

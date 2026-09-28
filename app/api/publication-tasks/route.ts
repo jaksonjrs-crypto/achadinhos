@@ -33,3 +33,15 @@ export async function POST(req:NextRequest){
     return NextResponse.json({ok:false,error:"Ação inválida."},{status:400});
   }catch(e:any){console.error("Publication queue action:",e?.message||e);return NextResponse.json({ok:false,error:"Não foi possível atualizar a fila."},{status:500})}
 }
+
+export async function DELETE(req:NextRequest){
+  try{
+    const body=await req.json().catch(()=>({}));
+    const id=Number(body.id);
+    if(!Number.isSafeInteger(id)||id<1) return NextResponse.json({ok:false,error:"Item inválido."},{status:400});
+    const sql=await ensurePublicationQueue();
+    const rows=await sql`DELETE FROM publication_tasks WHERE id=${id}
+      AND status IN ('ready','scheduled','skipped') AND attempts=0 RETURNING id`;
+    return NextResponse.json({ok:rows.length>0,error:rows.length?null:"Só itens sem tentativa de envio podem ser removidos."},{status:rows.length?200:409});
+  }catch(e:any){console.error("Publication queue removal:",e?.message||e);return NextResponse.json({ok:false,error:"Não foi possível remover o item."},{status:500})}
+}
