@@ -10,14 +10,14 @@ export default async function Conteudo({searchParams}:{searchParams:Promise<Reco
   let offers:any[]=[];try{offers=await listPublishedOffers()}catch{}
   const requested=Number(params.oferta||0);
   const selected=offers.find(o=>Number(o.id)===requested)||offers[0];
-  const allowedChannels=["instagram","whatsapp","telegram","pinterest","vitrine"] as const;
+  const allowedChannels=["instagram","facebook","whatsapp","telegram","pinterest","tiktok","vitrine"] as const;
   const requestedChannel=allowedChannels.includes(params.canal as any)?params.canal as typeof allowedChannels[number]:"instagram";
 
   return <main className="panel">
     <span className="badge">{APP_VERSION}</span><h1>Central de Conteúdo 3.0</h1>
     <p className="muted">Escolha uma oferta e prepare textos e links rastreados por canal sem precisar percorrer o catálogo inteiro.</p>
     <div className="noticeBox">
-      <b>Estratégia de links:</b> use <code>/ofertas</code> na bio/perfil das redes sociais. Em posts de produto, use o link rastreado individual gerado abaixo; ele registra o canal e segue para a Shopee.
+      <b>Estratégia de links:</b> use <code>/ofertas</code> na bio/perfil. Em posts de produto, use o link rastreado individual gerado abaixo; ele registra o canal e segue para o marketplace da oferta.
     </div>
     {offers.length===0?<div className="empty">Publique uma oferta para gerar os textos de divulgação.</div>:<>
       <form className="offerSelector" method="get">

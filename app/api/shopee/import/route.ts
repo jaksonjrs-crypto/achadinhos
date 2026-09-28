@@ -70,11 +70,12 @@ export async function POST(req:Request){
         p.ratingStar?`Avaliação: ${p.ratingStar}`:"",
         sales!=null?`Vendas informadas: ${sales}`:`Vendas não informadas`
       ].filter(Boolean).join(" | ");
-      await sql`INSERT INTO product_candidates
+      const inserted=await sql`INSERT INTO product_candidates
         (title,category,marketplace,product_url,image_url,price,original_price,score,status,notes,external_id,sold_quantity)
         VALUES(${title},${category},${"Shopee"},${affiliateUrl},
-          ${p.imageUrl||null},${price},${originalPrice(p)},${candidateScore},'review',${notes},${externalId},${sales})`;
-      imported++;
+          ${p.imageUrl||null},${price},${originalPrice(p)},${candidateScore},'review',${notes},${externalId},${sales})
+        ON CONFLICT DO NOTHING RETURNING id`;
+      if(inserted.length) imported++; else skippedDuplicate++;
     }
     return NextResponse.json({ok:true,imported,skippedUnsafe,skippedDuplicate,skippedQuality,
       received:(data.nodes||[]).length,pageInfo:data.pageInfo,keyword:keyword||null,minScore});

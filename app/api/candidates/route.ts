@@ -20,6 +20,19 @@ export async function POST(req:NextRequest){
   if(productUrl){try{const u=new URL(productUrl);if(!["http:","https:"].includes(u.protocol))throw 0}catch{return NextResponse.json({error:"Link inválido"},{status:400})}}
   if(imageUrl){try{const u=new URL(imageUrl);if(!["http:","https:"].includes(u.protocol))throw 0}catch{return NextResponse.json({error:"URL da imagem inválida"},{status:400})}}
   const sql=db();
+  const duplicate=await sql`
+    SELECT id FROM product_candidates
+    WHERE LOWER(TRIM(marketplace))=LOWER(TRIM(${marketplace}))
+      AND status IN ('review','approved')
+      AND ((${productUrl}<>'' AND product_url=${productUrl}) OR LOWER(TRIM(title))=LOWER(TRIM(${title})))
+    LIMIT 1`;
+  const published=await sql`
+    SELECT id FROM offers
+    WHERE LOWER(TRIM(marketplace))=LOWER(TRIM(${marketplace}))
+      AND status='published'
+      AND ((${productUrl}<>'' AND affiliate_url=${productUrl}) OR LOWER(TRIM(title))=LOWER(TRIM(${title})))
+    LIMIT 1`;
+  if(duplicate.length||published.length) return NextResponse.redirect(new URL("/garimpo-inteligente?duplicate=1",req.url),303);
   await sql`INSERT INTO product_candidates(title,category,marketplace,product_url,image_url,price,original_price,score,status,notes)
     VALUES(${title},${category},${marketplace},${productUrl||null},${imageUrl||null},${price},${originalPrice},${score},'review',${notes||null})`;
   return NextResponse.redirect(new URL("/garimpo-inteligente?saved=1",req.url),303);

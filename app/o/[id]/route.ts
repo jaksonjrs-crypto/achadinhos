@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 export const dynamic="force-dynamic";
 
-const channelMap:Record<string,string>={w:"whatsapp",i:"instagram",t:"telegram",p:"pinterest",v:"vitrine"};
+const channelMap:Record<string,string>={w:"whatsapp",i:"instagram",f:"facebook",t:"telegram",p:"pinterest",k:"tiktok",v:"vitrine"};
 const money=(v:number)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v);
 const esc=(v:unknown)=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c));
 const short=(s:string,n=70)=>s.length>n?s.slice(0,n-1).trim()+"…":s;

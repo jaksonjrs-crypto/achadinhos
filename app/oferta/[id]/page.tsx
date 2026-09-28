@@ -25,7 +25,7 @@ export default async function OfertaShare({params,searchParams}:{params:Promise<
   const {id}=await params; const q=await searchParams; const n=Number(id);
   let o:any=null; try{o=await offer(n)}catch{}
   if(!o)return <main className="panel"><h1>Oferta indisponível</h1></main>;
-  const allowed=new Set(["vitrine","instagram","whatsapp","telegram","pinterest"]);
+  const allowed=new Set(["vitrine","instagram","facebook","whatsapp","telegram","pinterest","tiktok"]);
   const channel=allowed.has(String(q.channel))?String(q.channel):"vitrine";
   return <main className="panel"><h1>{o.title}</h1><strong>{money(Number(o.price))}</strong><AutoRedirect id={n} channel={channel}/><noscript><a href={`/go/${n}?channel=${channel}`}>Abrir oferta</a></noscript></main>;
 }

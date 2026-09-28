@@ -7,7 +7,7 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{id:string}>}
   const rows=await sql`SELECT affiliate_url FROM offers WHERE id=${n} AND status='published' LIMIT 1`;
   if(!rows[0])return new NextResponse('Oferta indisponível',{status:404});
   const requested=(req.nextUrl.searchParams.get('channel')||req.nextUrl.searchParams.get('src')||'vitrine').slice(0,100);
-  const allowedChannels=new Set(['vitrine','instagram','whatsapp','telegram','pinterest']);
+  const allowedChannels=new Set(['vitrine','instagram','facebook','whatsapp','telegram','pinterest','tiktok']);
   const channel=allowedChannels.has(requested)?requested:'vitrine';
   const referrer=req.headers.get('referer')?.slice(0,1000)||null;
   const userAgent=req.headers.get('user-agent')?.slice(0,500)||null;

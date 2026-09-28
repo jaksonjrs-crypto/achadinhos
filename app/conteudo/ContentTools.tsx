@@ -1,16 +1,16 @@
 "use client";
 import { useMemo, useState } from "react";
 
-type Channel="instagram"|"whatsapp"|"telegram"|"pinterest"|"vitrine";
+type Channel="instagram"|"facebook"|"whatsapp"|"telegram"|"pinterest"|"tiktok"|"vitrine";
 type Props={id:number;title:string;priceLabel:string;marketplace:string;initialChannel?:Channel};
-const channels=["instagram","whatsapp","telegram","pinterest","vitrine"] as const;
+const channels=["instagram","facebook","whatsapp","telegram","pinterest","tiktok","vitrine"] as const;
 
 export default function ContentTools({id,title,priceLabel,marketplace,initialChannel="instagram"}:Props){
   const [channel,setChannel]=useState<Channel>(initialChannel);
   const [copied,setCopied]=useState("");
   const [style,setStyle]=useState<"direto"|"beneficio"|"urgencia">("direto");
   const origin=typeof window!=="undefined"?window.location.origin:"";
-  const channelCode:Record<Channel,string>={instagram:"i",whatsapp:"w",telegram:"t",pinterest:"p",vitrine:"v"};
+  const channelCode:Record<Channel,string>={instagram:"i",facebook:"f",whatsapp:"w",telegram:"t",pinterest:"p",tiktok:"k",vitrine:"v"};
   const linkFor=(target:Channel)=>`${origin}/o/${id}?c=${channelCode[target]}`;
   const customTrackedUrl=linkFor(channel);
   const shortTitle=title.length>62?`${title.slice(0,61).trim()}…`:title;
@@ -26,6 +26,8 @@ export default function ContentTools({id,title,priceLabel,marketplace,initialCha
       whatsapp:`${style==="urgencia"?"🔥 Oferta para conferir!":style==="beneficio"?"✨ Achado útil do dia!":"🔥 Achado de hoje!"}\n${shortTitle}\n💰 ${priceLabel}\n🔗 ${linkFor("whatsapp")}\n\n*Promoção sujeita a alteração a qualquer momento.`,
       telegram:`${style==="urgencia"?"🔥 OFERTA PARA CONFERIR":"🔥 ACHADO DO DIA"}\n${shortTitle}\n➡️ por ${priceLabel}\n🛒 ${marketplace}\n🔗 ${linkFor("telegram")}\n\n*Promoção sujeita a alteração a qualquer momento.`,
       pinterest:`${shortTitle}\n➡️ por ${priceLabel}\n🔗 ${linkFor("pinterest")}\n\n*Promoção sujeita a alteração a qualquer momento.`,
+      facebook:`${intro}\n💰 ${priceLabel}\n🔗 ${linkFor("facebook")}\n\n*Promoção sujeita a alteração a qualquer momento.`,
+      tiktok:`${shortTitle}\n💰 ${priceLabel}\nConfira o link na bio: ${origin}/ofertas\n\n#VitrineDosAchados #Achadinhos`,
       roteiro:`Mostre a foto ou vídeo do produto → ${style==="beneficio"?"destaque o problema que ele pode ajudar a resolver → ":""}exiba o nome do produto → destaque o preço atual (${priceLabel}) → use apenas benefícios que você confirmou no anúncio → finalize com “Confira na Vitrine dos Achados”.`
     };
   },[id,title,priceLabel,marketplace,origin,style]);
@@ -42,10 +44,10 @@ export default function ContentTools({id,title,priceLabel,marketplace,initialCha
       setCopied("");alert("Não foi possível copiar automaticamente. Selecione o conteúdo e copie manualmente.");
     }
   }
-  const [contentType,setContentType]=useState<"instagram"|"whatsapp"|"telegram"|"pinterest"|"roteiro">(
+  const [contentType,setContentType]=useState<"instagram"|"facebook"|"whatsapp"|"telegram"|"pinterest"|"tiktok"|"roteiro">(
     initialChannel==="vitrine"?"instagram":initialChannel
   );
-  const contentLabels={instagram:"Instagram / Threads",whatsapp:"WhatsApp",telegram:"Telegram",pinterest:"Pinterest",roteiro:"Roteiro curto sem rosto"} as const;
+  const contentLabels={instagram:"Instagram / Threads",facebook:"Facebook",whatsapp:"WhatsApp",telegram:"Telegram",pinterest:"Pinterest",tiktok:"TikTok",roteiro:"Roteiro curto sem rosto"} as const;
   const selectedText=texts[contentType];
 
   return <>

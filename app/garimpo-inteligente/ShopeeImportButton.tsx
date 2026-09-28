@@ -1,5 +1,5 @@
 "use client";
-import {useState} from "react";
+import {useEffect,useState} from "react";
 import {useRouter} from "next/navigation";
 
 const themes=[
@@ -16,7 +16,9 @@ export default function ShopeeImportButton(){
   const [busy,setBusy]=useState(false);
   const [approving,setApproving]=useState(false);
   const [preparing,setPreparing]=useState(false);
+  const [configured,setConfigured]=useState<boolean|null>(null);
   const router=useRouter();
+  useEffect(()=>{fetch("/api/integrations/status",{cache:"no-store"}).then(r=>r.json()).then(d=>setConfigured(Boolean(d?.shopee?.configured))).catch(()=>setConfigured(null))},[]);
   async function run(next=false){
     const selected=themes.find(x=>x[0]===theme) || themes[0];
     const target=next?page+1:1;
@@ -60,9 +62,9 @@ export default function ShopeeImportButton(){
 
   return <div className="importToolbar">
     <select aria-label="Tema do garimpo" value={theme} onChange={e=>{setTheme(e.target.value);setPage(1)}}>{themes.map(([label])=><option key={label}>{label}</option>)}</select>
-    <button onClick={()=>run(false)} disabled={busy}>{busy?"Garimpando…":"Garimpar Shopee"}</button>
-    <button className="secondaryMini" onClick={()=>run(true)} disabled={busy}>Próxima</button>
+    <button onClick={()=>run(false)} disabled={busy||configured===false}>{busy?"Garimpando…":"Garimpar Shopee"}</button>
+    <button className="secondaryMini" onClick={()=>run(true)} disabled={busy||configured===false}>Próxima</button>
     <details className="importMore"><summary>Mais</summary><div><button onClick={approveTop} disabled={busy||approving}>{approving?"Aprovando…":"Aprovar 80+"}</button><button onClick={prepareTop} disabled={busy||approving||preparing}>{preparing?"Preparando…":"Preparar 80+"}</button></div></details>
-    {state&&<span className="importState">{state}</span>}
+    <span className="importState">{state|| (configured===false?"Configure SHOPEE_APP_ID e SHOPEE_SECRET para ativar a consulta.":"")}</span>
   </div>
 }
