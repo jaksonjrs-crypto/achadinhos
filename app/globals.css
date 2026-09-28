@@ -412,3 +412,6 @@
 .moreNavMenu{position:absolute;right:0;top:25px;z-index:80;min-width:170px;background:#fff;border:1px solid #dce5df;border-radius:10px;padding:7px;box-shadow:0 12px 30px #0003;display:grid;gap:3px}
 .moreNavMenu a{color:#172033!important;padding:7px;border-radius:7px;text-decoration:none}
 @media(max-width:760px){.moreNavTrigger{width:100%;text-align:left;background:#10213f;border-radius:8px;padding:9px 10px;font-size:12px}.moreNavMenu{position:static;margin-top:4px;box-shadow:none;grid-template-columns:repeat(2,minmax(0,1fr));background:#0c1b35;border-color:#294166}.moreNavMenu a{color:#fff!important;background:#12264c;font-size:10px}}
+
+/* v3.3.6 — fluxo operacional simplificado */
+.flowSteps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.flowSteps>div{display:flex;align-items:center;gap:8px;background:#fff;color:#172033;border:1px solid #dfe6e1;border-radius:12px;padding:10px}.flowSteps b{display:grid;place-items:center;width:24px;height:24px;border-radius:999px;background:#e6f6f0;color:#08785e;font-size:12px}.flowSteps span{font-size:12px;font-weight:700}.disclosureActions .secondaryMini:last-child{margin-left:auto}@media(max-width:720px){.flowSteps{grid-template-columns:repeat(2,minmax(0,1fr))}.disclosureActions .secondaryMini:last-child{margin-left:0}}

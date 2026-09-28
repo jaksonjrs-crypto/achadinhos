@@ -23,7 +23,7 @@ export default function ContentTools({id,title,priceLabel,marketplace,initialCha
     }[style];
     return {
       instagram:`${intro}\n💰 ${priceLabel}\n🔗 ${linkFor("instagram")}\n\n*Promoção sujeita a alteração a qualquer momento.\n\n#VitrineDosAchados #Achadinhos #Ofertas`,
-      whatsapp:`${style==="urgencia"?"🔥 Oferta para conferir!":style==="beneficio"?"✨ Achado útil do dia!":"🔥 Achado de hoje!"}\n🔗 Confira a promoção:\n${linkFor("whatsapp")}\n\n*Promoção sujeita a alteração a qualquer momento.`,
+      whatsapp:`${style==="urgencia"?"🔥 Oferta para conferir!":style==="beneficio"?"✨ Achado útil do dia!":"🔥 Achado de hoje!"}\n${shortTitle}\n💰 ${priceLabel}\n🔗 ${linkFor("whatsapp")}\n\n*Promoção sujeita a alteração a qualquer momento.`,
       telegram:`${style==="urgencia"?"🔥 OFERTA PARA CONFERIR":"🔥 ACHADO DO DIA"}\n${shortTitle}\n➡️ por ${priceLabel}\n🛒 ${marketplace}\n🔗 ${linkFor("telegram")}\n\n*Promoção sujeita a alteração a qualquer momento.`,
       pinterest:`${shortTitle}\n➡️ por ${priceLabel}\n🔗 ${linkFor("pinterest")}\n\n*Promoção sujeita a alteração a qualquer momento.`,
       roteiro:`Mostre a foto ou vídeo do produto → ${style==="beneficio"?"destaque o problema que ele pode ajudar a resolver → ":""}exiba o nome do produto → destaque o preço atual (${priceLabel}) → use apenas benefícios que você confirmou no anúncio → finalize com “Confira na Vitrine dos Achados”.`

@@ -7,14 +7,14 @@ const primary = [
   ["Painel", "/operacao"],
   ["Produtos", "/garimpo-inteligente"],
   ["Ofertas", "/central"],
-  ["Divulgação", "/automacao"],
+  ["Divulgação", "/divulgacao"],
   ["Resultados", "/resultados"],
   ["Configurações", "/settings"],
   ["Vitrine", "/ofertas"],
 ];
 const secondary = [
   ["Início", "/admin"], ["Saúde", "/prontidao"], ["Fontes", "/products"],
-  ["Conteúdo", "/conteudo"], ["Criativos", "/criativos"],
+  ["Conteúdo", "/conteudo"], ["Criativos", "/criativos"], ["Automação", "/automacao"],
 ];
 export default function MainNav(){
  const path=usePathname(); const [open,setOpen]=useState(false); const [moreOpen,setMoreOpen]=useState(false); const moreRef=useRef<HTMLDivElement>(null);
