@@ -34,7 +34,7 @@ export default function SettingsPage() {
       <div className="integrationRows">
         <p><b>Identificador do aplicativo</b>{pill(Boolean(integrations?.shopee?.appConfigured))}</p>
         <p><b>Segredo/chave do aplicativo</b>{pill(Boolean(integrations?.shopee?.secretConfigured))}</p>
-        <p><b>Conector ao vivo</b><span className="manualPill">Desativado com segurança</span></p>
+        <p><b>Conector ao vivo</b>{pill(Boolean(integrations?.shopee?.liveConnector))}</p>
       </div>
       <p className="muted">{integrations?.shopee?.note||"Verificando configuração do servidor..."}</p>
       <div className="noticeBox"><b>Segurança:</b> quando a Shopee liberar as credenciais, cadastre-as somente nas variáveis de ambiente da Vercel. Não cole segredos em formulários do site nem nesta conversa.</div>
@@ -65,7 +65,7 @@ export default function SettingsPage() {
     <section className="integrationBox">
       <h2>Próximas ativações</h2>
       <div className="integrationRows">
-        <p><b>Importação Shopee → Garimpo</b><span className="waitPill">Após API oficial</span></p>
+        <p><b>Importação Shopee → Garimpo</b>{pill(Boolean(integrations?.shopee?.liveConnector))}</p>
         <p><b>Filtro seguro de catálogo</b><span className="readyPill">Pronto</span></p>
         <p><b>Publicação em redes sociais</b><span className="manualPill">Manual por enquanto</span></p>
       </div>

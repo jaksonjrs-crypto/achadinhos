@@ -4,6 +4,9 @@ import { getDashboardStats } from "@/lib/analytics";
 export const dynamic="force-dynamic";
 
 export default async function Prontidao(){
+  const shopeeReady=Boolean(process.env.SHOPEE_APP_ID?.trim()&&process.env.SHOPEE_SECRET?.trim());
+  const pinterestReady=Boolean(process.env.PINTEREST_APP_ID?.trim()&&process.env.PINTEREST_APP_SECRET?.trim()&&process.env.PINTEREST_REDIRECT_URI?.trim());
+  const telegramReady=Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()&&process.env.TELEGRAM_CHAT_ID?.trim());
   let offers:any[]=[]; let stats:any={summary:{clicks:0,published:0,clicked_offers:0}};
   let dbOk=true, analyticsOk=true;
   try{offers=await listAllOffers()}catch{dbOk=false}
@@ -29,7 +32,7 @@ export default async function Prontidao(){
     <p className="muted">Checklist operacional da versão atual baseado no estado real da plataforma. Ele separa o que já funciona do que ainda depende de integrações externas.</p>
 
     <section className="readinessHero">
-      <div><strong>{percent}%</strong><span>{passed} de {checks.length} verificações operacionais</span></div>
+      <div><strong>{percent}%</strong><span>{passed} de {checks.length} verificações do núcleo</span></div>
       <div className="readinessBar"><i style={{width:`${percent}%`}}/></div>
     </section>
 
@@ -41,11 +44,13 @@ export default async function Prontidao(){
     </section>
 
     <section className="integrationBox">
-      <h2>Integrações externas pendentes</h2>
-      <p className="muted">O núcleo operacional funciona com cadastro e divulgação manuais. Shopee Open API e publicação automática em redes só serão ativadas com acesso, autorização e documentação oficial.</p>
+      <h2>Integrações externas</h2>
+      <p className="muted">A importação Shopee funciona quando as credenciais estão configuradas. Pinterest exige também a conta conectada; Telegram exige bot e canal acessíveis. Confira a resposta das APIs na Divulgação.</p>
       <div className="integrationRows">
-        <p><b>Shopee Open API</b><span className="waitPill">Integração futura</span></p>
-        <p><b>Publicação automática em redes</b><span className="manualPill">Integração futura</span></p>
+        <p><b>Shopee Open API</b><span className={shopeeReady?"readyPill":"waitPill"}>{shopeeReady?"Credenciais presentes":"Credenciais pendentes"}</span></p>
+        <p><b>Pinterest</b><span className={pinterestReady?"readyPill":"waitPill"}>{pinterestReady?"OAuth disponível":"Credenciais pendentes"}</span></p>
+        <p><b>Telegram</b><span className={telegramReady?"readyPill":"waitPill"}>{telegramReady?"Bot configurado":"Bot pendente"}</span></p>
+        <p><b>Instagram, Facebook, WhatsApp e TikTok</b><span className="manualPill">Envio assistido</span></p>
       </div>
     </section>
 
