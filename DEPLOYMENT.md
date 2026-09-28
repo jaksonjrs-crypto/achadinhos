@@ -1,0 +1,8 @@
+# Implantação na Vercel
+
+1. Configure `DATABASE_URL`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `TOKEN_ENCRYPTION_KEY` e `CRON_SECRET` no ambiente Production. Configure as credenciais dos canais usados (`SHOPEE_APP_ID`, `SHOPEE_SECRET`, `PINTEREST_APP_ID`, `PINTEREST_APP_SECRET`, `PINTEREST_REDIRECT_URI`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `MERCADO_LIVRE_CLIENT_ID`, `MERCADO_LIVRE_CLIENT_SECRET`, `MERCADO_LIVRE_REDIRECT_URI`) conforme necessário. O callback do Mercado Livre deve coincidir com o endereço cadastrado no aplicativo.
+2. Antes de ativar o Autopiloto, aplique `db/schema.sql` (em um banco novo) e os scripts incrementais de `db/` pertinentes ao banco atual. Aplique `db/v3.4-publication-tasks.sql` e `db/v3.4-autopilot-policy.sql` com uma conexão de migração. **Em um banco que já tem `autopilot_policy`, o script v3.4 é obrigatório para adicionar as colunas da trava.** As rotas também criam as tabelas se faltarem; se a conexão da aplicação não tiver permissão de DDL, a migração prévia é obrigatória. Faça backup do banco antes de alterar o esquema.
+3. Execute `npm ci`, `npm run typecheck` e `npm run build` antes do deploy. Confira o diretório raiz do projeto e as variáveis Production na Vercel.
+4. Depois do deploy, confira `/prontidao` e o carregamento autenticado de `/divulgacao` e `/automacao`. Verifique nos logs as respostas dos crons `/api/catalog/cron` e `/api/autopilot/cron`; uma resposta 401 indica ausência ou divergência de `CRON_SECRET`.
+
+O cron do Autopiloto usa uma reserva de dois minutos no banco. A rota tem duração máxima de 60 segundos, de modo que a reserva também expira após uma interrupção. A trava serializa execuções do Autopiloto; publicações manuais simultâneas não participam do limite diário da trava.
