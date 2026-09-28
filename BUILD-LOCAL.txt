@@ -1,0 +1,6 @@
+
+> garimpo-afiliados-v0.5.2@0.5.2 build
+> next build
+
+
+sh: 1: next: Permission denied

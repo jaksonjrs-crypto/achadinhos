@@ -1,0 +1,4 @@
+export default async function Login({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){
+ const p=await searchParams; const next=String(p.next||"/operacao");
+ return <main className="loginPage"><section className="loginCard"><div className="loginMark">VA</div><p className="eyebrow">ÁREA RESTRITA</p><h1>Administrador</h1><p className="loginIntro">Entre para operar o Garimpo Afiliados e gerenciar as ofertas da Vitrine.</p>{p.erro&&<p className="loginError">Senha incorreta. Tente novamente.</p>}<form action="/api/admin/login" method="post"><input type="hidden" name="next" value={next}/><label>Senha<input type="password" name="password" required autoFocus autoComplete="current-password" placeholder="Digite sua senha"/></label><button type="submit">Entrar no painel</button></form><a className="backStore" href="/ofertas">← Voltar para a Vitrine</a></section></main>
+}

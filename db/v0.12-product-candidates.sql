@@ -1,0 +1,1 @@
+ALTER TABLE product_candidates ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'Casa', ADD COLUMN IF NOT EXISTS original_price NUMERIC(12,2);

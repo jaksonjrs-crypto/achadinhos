@@ -1,0 +1,1 @@
+import {NextRequest,NextResponse} from "next/server";export async function POST(req:NextRequest){await req.json().catch(()=>null);return NextResponse.json({received:true},{status:200})}export async function GET(){return NextResponse.json({ok:true,service:"mercadolivre-webhook"})}
