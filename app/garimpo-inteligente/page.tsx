@@ -5,6 +5,7 @@ import {APP_VERSION} from "@/lib/version";
 import {listCandidates} from "@/lib/candidates";
 import {listAllOffers} from "@/lib/offers";
 import CandidateEvaluator from "./CandidateEvaluator";
+import DuplicateReview from "./DuplicateReview";
 export const dynamic="force-dynamic";
 
 export default async function GarimpoInteligente({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){
@@ -17,6 +18,7 @@ export default async function GarimpoInteligente({searchParams}:{searchParams:Pr
  return <main className="panel compactAdmin">
   <div className="adminPageHead"><div><span className="badge">{APP_VERSION}</span><h1>Garimpo Inteligente</h1></div><div className="headActions"><div className="marketplaceImporters"><ShopeeImportButton/><MercadoLivreImportButton/></div><a className="mini secondaryMini" href="/central">Catálogo</a></div></div>
   <section className="compactKpis"><div><b>{candidates.length}</b><span>na fila</span></div><div><b>{review}</b><span>revisar</span></div><div><b>{approved}</b><span>aprovados</span></div><div><b>{strong}</b><span>score 80+</span></div><div><b>{published.length}</b><span>publicados</span></div></section>
+  <DuplicateReview/>
 
   <MercadoLivreDiagnostic/>
 
