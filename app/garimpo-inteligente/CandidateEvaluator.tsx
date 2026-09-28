@@ -16,6 +16,7 @@ export default function CandidateEvaluator(){
   const [price,setPrice]=useState("");
   const [originalPrice,setOriginalPrice]=useState("");
   const [category,setCategory]=useState("Casa");
+  const [marketplace,setMarketplace]=useState("Shopee");
   const [imageUrl,setImageUrl]=useState("");
   const [notes,setNotes]=useState("");
   const [values,setValues]=useState<Record<string,number>>(
@@ -33,27 +34,28 @@ export default function CandidateEvaluator(){
   },[values,discountPct,completeness]);
   const level=score>=80?"Forte candidato":score>=60?"Candidato promissor":score>=40?"Revisar antes de publicar":"Baixa prioridade";
 
-  function reset(){setTitle("");setUrl("");setPrice("");setOriginalPrice("");setCategory("Casa");setImageUrl("");setNotes("");setValues(Object.fromEntries(fields.map(([k])=>[k,3])))}
+  function reset(){setTitle("");setUrl("");setPrice("");setOriginalPrice("");setCategory("Casa");setMarketplace("Shopee");setImageUrl("");setNotes("");setValues(Object.fromEntries(fields.map(([k])=>[k,3])))}
 
   return <section className="evaluator">
     <div className="evaluatorHead">
-      <div><h2>Avaliador de candidato</h2><p className="muted">Use enquanto a importação automática da Shopee ainda não está disponível.</p></div>
+      <div><h2>Avaliador de candidato</h2><p className="muted">Cadastre uma oferta encontrada manualmente para revisar antes de divulgar.</p></div>
       <div className="scoreBox"><strong>{score}</strong><span>/100</span><small>{level}</small>{discountPct>0&&<em>{discountPct}% OFF</em>}</div>
     </div>
 
     <div className="candidateFields">
+      <label>Marketplace<select value={marketplace} onChange={e=>setMarketplace(e.target.value)}><option>Shopee</option><option>Mercado Livre</option><option>Amazon</option><option>Outro</option></select></label>
       <label>Produto<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Nome do produto"/></label>
       <label>Preço atual<input value={price} onChange={e=>setPrice(e.target.value)} placeholder="Ex.: 59,90"/></label>
       <label>Preço anterior<input value={originalPrice} onChange={e=>setOriginalPrice(e.target.value)} placeholder="Ex.: 79,90"/></label>
       <label>Categoria<input value={category} onChange={e=>setCategory(e.target.value)} placeholder="Ex.: Casa"/></label>
-      <label className="full">Link do produto<input value={url} onChange={e=>setUrl(e.target.value)} placeholder="Cole o link para referência"/></label><label className="full">URL da imagem<input value={imageUrl} onChange={e=>setImageUrl(e.target.value)} placeholder="Cole o endereço da imagem principal do produto"/></label>
+      <label className="full">Link de divulgação<input type="url" value={url} onChange={e=>setUrl(e.target.value)} placeholder="Cole o link que deve abrir para o comprador"/><small>Ao aprovar um candidato completo, este link será publicado na Vitrine. Use seu link de afiliado quando houver.</small></label><label className="full">URL da imagem<input value={imageUrl} onChange={e=>setImageUrl(e.target.value)} placeholder="Cole o endereço da imagem principal do produto"/></label>
     </div>
 
     <div className="garimpoInsights">
       <div><b>{discountPct>0?`${discountPct}%`:"—"}</b><span>desconto calculado</span></div>
       <div><b>{completeness}/5</b><span>dados essenciais</span></div>
       <div><b>{imageUrl.trim()?"OK":"Falta"}</b><span>imagem</span></div>
-      <div><b>{url.trim()?"OK":"Falta"}</b><span>link do produto</span></div>
+      <div><b>{url.trim()?"OK":"Falta"}</b><span>link de divulgação</span></div>
     </div>
     {completeness<5&&<div className="qualityAlert">Complete nome, categoria, preço, link e imagem antes de priorizar este candidato.</div>}
 
@@ -73,7 +75,7 @@ export default function CandidateEvaluator(){
         <form action="/api/candidates" method="post">
           <input type="hidden" name="title" value={title}/><input type="hidden" name="product_url" value={url}/>
           <input type="hidden" name="price" value={price}/><input type="hidden" name="original_price" value={originalPrice}/><input type="hidden" name="category" value={category}/><input type="hidden" name="image_url" value={imageUrl}/><input type="hidden" name="score" value={score}/>
-          <input type="hidden" name="notes" value={notes}/><input type="hidden" name="marketplace" value="Shopee"/>
+          <input type="hidden" name="notes" value={notes}/><input type="hidden" name="marketplace" value={marketplace}/>
           <button className="mini publish" type="submit" disabled={!title.trim()}>Salvar candidato</button>
         </form>
         <button className="mini secondaryMini" type="button" onClick={reset}>Limpar avaliação</button>
