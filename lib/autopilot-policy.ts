@@ -1,3 +1,4 @@
+import {importShopeeCandidates} from './shopee-import';
 import {randomUUID} from 'node:crypto';
 import {db} from './db';
 import {productSafetyCheck} from './product-safety';
@@ -44,6 +45,13 @@ export async function runAutopilot(now=new Date()){
   const count=await sql`SELECT COUNT(*)::int AS total FROM offers WHERE status='published' AND created_at>=${dayStart.toISOString()} AND created_at<${dayEnd.toISOString()}`;
   const remaining=Math.max(0,policy.max_per_day-Number(count[0]?.total||0));
   if(!remaining)return {ok:true,ran:false,reason:'Limite diário atingido',date};
+  // Automatic discovery is limited to the official Shopee connector. A failed
+  // discovery must not prevent already approved offers from being processed.
+  let discovery:Awaited<ReturnType<typeof importShopeeCandidates>>|{ok:false;reason:string}={ok:false,reason:'Credenciais Shopee ausentes'};
+  if(process.env.SHOPEE_APP_ID?.trim()&&process.env.SHOPEE_SECRET?.trim()){
+    try{discovery=await importShopeeCandidates({limit:10,minScore:policy.min_score,autoApprove:true})}
+    catch{discovery={ok:false,reason:'Consulta Shopee falhou; verificar acesso à API'}}
+  }
   const candidates=await sql`SELECT c.id,c.title,c.marketplace,c.external_id FROM product_candidates c
     WHERE c.status='approved' AND c.score>=${policy.min_score}
       AND c.image_url IS NOT NULL AND c.product_url IS NOT NULL AND c.price>0
@@ -101,7 +109,7 @@ export async function runAutopilot(now=new Date()){
       }
     }
   }
-  return {ok:true,ran:true,date,considered:candidates.length,published,pending,failed,queued,queuedTasks,telegramSent,telegramFailed,remaining:Math.max(0,remaining-published)};
+  return {ok:true,ran:true,date,discovery,considered:candidates.length,published,pending,failed,queued,queuedTasks,telegramSent,telegramFailed,remaining:Math.max(0,remaining-published)};
   }finally{
     await sql`UPDATE autopilot_policy SET run_token=NULL,lease_until=NULL WHERE id=1 AND run_token=${token}`;
   }
