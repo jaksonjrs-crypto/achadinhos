@@ -55,20 +55,24 @@ export async function runAutopilot(now=new Date()){
   // Lazy import avoids a dependency cycle with the candidate publishing flow.
   const {autopilotCandidate}=await import('./autopilot');
   const queue=candidates.length?await ensurePublicationQueue():null;
-  let published=0,pending=0,failed=0,queued=0,telegramSent=0,telegramFailed=0;
+  let published=0,pending=0,failed=0,queued=0,queuedTasks=0,telegramSent=0,telegramFailed=0;
   for(const c of candidates){
     const r=await autopilotCandidate(Number(c.id));
     if(!r.ok){failed++;continue}
     if(!r.published||!r.offerId){pending++;continue}
     published++;
-    // A fila registra a divulgação sem disparar uma mensagem antes de haver regras por canal.
+    // Prepare todos os canais. Somente o Telegram pode ser enviado automaticamente
+    // aqui, quando o responsável tiver habilitado essa opção.
     const rows=await queue!`INSERT INTO publication_tasks(offer_id,channel,cycle_date,status)
-      VALUES(${r.offerId},'telegram',${date}::date,'ready')
-      ON CONFLICT (offer_id,channel,cycle_date) DO NOTHING RETURNING id`;
+      SELECT ${r.offerId}, channels.channel, ${date}::date, 'ready'
+      FROM unnest(ARRAY['telegram','pinterest','instagram','facebook','whatsapp','tiktok']) AS channels(channel)
+      ON CONFLICT (offer_id,channel,cycle_date) DO NOTHING RETURNING id,channel`;
     if(rows.length){
       queued++;
-      if(policy.telegram_auto_publish && process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID){
-        const taskId=Number(rows[0].id);
+      queuedTasks+=rows.length;
+      const telegramTask=rows.find((row:any)=>row.channel==='telegram');
+      if(telegramTask && policy.telegram_auto_publish && process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID){
+        const taskId=Number(telegramTask.id);
         const claimedTask=await queue!`UPDATE publication_tasks
           SET status='publishing',attempts=attempts+1,updated_at=NOW()
           WHERE id=${taskId} AND status='ready' RETURNING id`;
@@ -97,7 +101,7 @@ export async function runAutopilot(now=new Date()){
       }
     }
   }
-  return {ok:true,ran:true,date,considered:candidates.length,published,pending,failed,queued,telegramSent,telegramFailed,remaining:Math.max(0,remaining-published)};
+  return {ok:true,ran:true,date,considered:candidates.length,published,pending,failed,queued,queuedTasks,telegramSent,telegramFailed,remaining:Math.max(0,remaining-published)};
   }finally{
     await sql`UPDATE autopilot_policy SET run_token=NULL,lease_until=NULL WHERE id=1 AND run_token=${token}`;
   }
