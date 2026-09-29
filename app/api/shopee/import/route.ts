@@ -56,6 +56,7 @@ export async function POST(req:Request){
       const sales=optionalNum(p.sales);
       const discount=num(p.priceDiscountRate);
       const commissionRate=num(p.commissionRate)*100;
+      if(sales!=null && sales<=0){skippedQuality++;continue}
       const hasTrustSignal=rating>=4 || (sales!=null && sales>=10);
       const hasOfferSignal=discount>=10 || commissionRate>=8;
       if(candidateScore<minScore || !hasTrustSignal || !hasOfferSignal){
