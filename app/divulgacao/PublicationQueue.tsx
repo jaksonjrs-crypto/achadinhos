@@ -74,9 +74,9 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
         <button className="mini secondaryMini" disabled={busy} onClick={()=>copy(t)}>Copiar link</button>
         {((t.channel==="pinterest"&&connections.pinterest?.connected&&boardId)||(t.channel==="telegram"&&connections.telegram?.configured))&&["ready","scheduled"].includes(t.status)&&<button className="mini publish" disabled={busy} onClick={()=>publish(t)}>Publicar pela API</button>}
         {t.channel==="whatsapp"&&<a className="mini" target="_blank" rel="noopener noreferrer" href={`https://wa.me/?text=${encodeURIComponent(`${t.title}\nConfira: ${origin}/go/${t.offer_id}?channel=whatsapp`)}`}>Abrir WhatsApp</a>}
-        {t.status!=="published"&&<button className="mini publish" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"published"})}>Marcar concluído</button>}
+        {!["telegram","pinterest"].includes(t.channel)&&t.status!=="published"&&<button className="mini publish" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"published"})}>Marcar envio manual</button>}
         {t.status!=="skipped"&&t.status!=="published"&&<button className="mini secondaryMini" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"skipped"})}>Ignorar</button>}
-        {["published","skipped","failed"].includes(t.status)&&<button className="mini secondaryMini" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"ready"})}>Reabrir</button>}
+        {["skipped","failed"].includes(t.status)&&<button className="mini secondaryMini" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"ready"})}>Reabrir</button>}
         {t.attempts===0&&["ready","scheduled","skipped"].includes(t.status)&&<button className="mini secondaryMini" disabled={busy} onClick={()=>remove(t)}>Remover</button>}
       </div>
     </article>)}</div>}

@@ -26,8 +26,13 @@ export async function POST(req:NextRequest){
     if(body.action==="mark"){
       const id=Number(body.id),status=String(body.status||"");
       if(!Number.isSafeInteger(id)||id<1||!["ready","published","skipped"].includes(status)) return NextResponse.json({ok:false,error:"Estado inválido."},{status:400});
+      if(status==='published'){
+        const rows=await sql`SELECT channel FROM publication_tasks WHERE id=${id} LIMIT 1`;
+        if(!rows.length)return NextResponse.json({ok:false,error:"Item não encontrado."},{status:404});
+        if(['telegram','pinterest'].includes(String(rows[0].channel)))return NextResponse.json({ok:false,error:"Use Publicar pela API e confira o resultado neste canal."},{status:409});
+      }
       const rows=await sql`UPDATE publication_tasks SET status=${status},published_at=${status==='published'?new Date().toISOString():null},last_error=NULL,updated_at=NOW()
-        WHERE id=${id} AND status IN ('ready','scheduled','failed','published','skipped') RETURNING id`;
+        WHERE id=${id} AND status IN ('ready','scheduled','failed','skipped') RETURNING id`;
       return NextResponse.json({ok:rows.length>0},{status:rows.length?200:409});
     }
     return NextResponse.json({ok:false,error:"Ação inválida."},{status:400});

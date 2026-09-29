@@ -15,12 +15,12 @@ export async function POST(req:NextRequest){
       RETURNING offer_id,channel`;
     if(!claimed.length) return NextResponse.json({ok:false,error:"Item já processado ou agendado para mais tarde."},{status:409});
     const offerId=Number(claimed[0].offer_id),channel=String(claimed[0].channel);
+    let accepted=false,externalId="";
     try{
       const offers=await sql`SELECT title,image_url,price,status FROM offers WHERE id=${offerId} LIMIT 1`;
       const offer:any=offers[0];
       if(!offer||offer.status!=='published'||!productSafetyCheck(String(offer.title||'')).allowed) throw new Error("Oferta indisponível ou bloqueada.");
       const link=`${new URL(req.url).origin}/o/${offerId}?c=${channel==='telegram'?'t':'p'}`;
-      let externalId="";
       if(channel==='telegram'){
         const token=process.env.TELEGRAM_BOT_TOKEN?.trim(),chatId=process.env.TELEGRAM_CHAT_ID?.trim();
         if(!token||!chatId) throw new Error("Bot e canal do Telegram não configurados.");
@@ -37,9 +37,14 @@ export async function POST(req:NextRequest){
         if(!r.ok) throw new Error(`Pinterest: ${String(data.message||r.status).slice(0,180)}`);
         externalId=String(data.id||'');
       }else throw new Error("Este canal usa publicação assistida nesta versão.");
+      accepted=true;
       await sql`UPDATE publication_tasks SET status='published',external_id=${externalId||null},published_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=${id}`;
       return NextResponse.json({ok:true,externalId});
     }catch(e:any){
+      if(accepted){
+        console.error('Publication accepted but not recorded',{id,externalId,error:String(e?.message||e)});
+        return NextResponse.json({ok:false,error:'A API aceitou o envio, mas não foi possível registrar a conclusão. Confira o canal antes de qualquer nova tentativa.'},{status:500});
+      }
       const raw=String(e?.message||'Falha na publicação');
       const token=process.env.TELEGRAM_BOT_TOKEN?.trim();
       const message=(token?raw.replaceAll(token,'[redacted]'):raw).slice(0,300);
