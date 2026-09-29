@@ -427,3 +427,7 @@
 .publicLinks a:focus-visible,.publicBrand:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .store #ofertas{scroll-margin-top:76px}
 @media(max-width:520px){.publicHeaderInner{min-height:56px;padding:5px 12px;gap:8px}.publicBrandLogo{width:126px;max-height:42px}.publicLinks a{font-size:11px;padding:8px 7px}}
+
+/* Enquadra a arte horizontal sem as margens transparentes do PNG original. */
+.publicBrandLogo{width:225px;height:54px;max-height:none;object-fit:cover;object-position:center}
+@media(max-width:520px){.publicBrandLogo{width:160px;height:39px;max-height:none}}
