@@ -18,12 +18,31 @@ export async function GET(){
   result.telegram.configured=Boolean(token&&chatId);
   if(token&&chatId){
     try{
+      const endpoint=`https://api.telegram.org/bot${token}/`;
       const [bot,chat]=await Promise.all([
-        fetch(`https://api.telegram.org/bot${token}/getMe`,{cache:'no-store'}).then(r=>r.json()),
-        fetch(`https://api.telegram.org/bot${token}/getChat?chat_id=${encodeURIComponent(chatId)}`,{cache:'no-store'}).then(r=>r.json())
+        fetch(endpoint+"getMe",{cache:"no-store"}).then(r=>r.json()),
+        fetch(endpoint+"getChat?chat_id="+encodeURIComponent(chatId),{cache:"no-store"}).then(r=>r.json())
       ]);
-      result.telegram={configured:true,ok:Boolean(bot.ok&&chat.ok),bot:bot.ok?bot.result?.username:null,chat:chat.ok?chat.result?.title||chat.result?.username||null:null,error:!bot.ok||!chat.ok?'Bot ou canal não acessível.':null};
-    }catch{result.telegram={configured:true,ok:false,error:'Falha ao consultar o Telegram.'}}
+      if(!bot.ok){
+        result.telegram={configured:true,ok:false,error:"Bot do Telegram inacessível. Confira o token."};
+      }else if(!chat.ok){
+        result.telegram={configured:true,ok:false,bot:bot.result?.username||null,error:"Canal inacessível. Confira o ID e adicione o bot ao canal."};
+      }else{
+        const name=chat.result?.title||chat.result?.username||null;
+        if(chat.result?.type!=="channel"){
+          result.telegram={configured:true,ok:false,bot:bot.result?.username||null,chat:name,error:"O destino configurado não é um canal do Telegram."};
+        }else{
+          const params=new URLSearchParams({chat_id:chatId,user_id:String(bot.result.id)});
+          const member=await fetch(endpoint+"getChatMember?"+params,{cache:"no-store"}).then(r=>r.json());
+          const status=member.result?.status;
+          const canPost=member.ok&&(status==="creator"||(status==="administrator"&&member.result?.can_post_messages===true));
+          result.telegram={
+            configured:true,ok:canPost,bot:bot.result?.username||null,chat:name,
+            error:canPost?null:!member.ok?"Não foi possível confirmar a permissão. Adicione o bot como administrador do canal.":"O bot precisa ser administrador do canal com permissão para publicar mensagens."
+          };
+        }
+      }
+    }catch{result.telegram={configured:true,ok:false,error:"Falha ao consultar o Telegram."}}
   }
   return NextResponse.json(result,{headers:{'Cache-Control':'no-store'}});
 }
