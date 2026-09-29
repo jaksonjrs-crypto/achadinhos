@@ -431,3 +431,24 @@
 /* Enquadra a arte horizontal sem as margens transparentes do PNG original. */
 .publicBrandLogo{width:225px;height:54px;max-height:none;object-fit:cover;object-position:center}
 @media(max-width:520px){.publicBrandLogo{width:160px;height:39px;max-height:none}}
+
+/* Vitrine desktop: ocupa a largura do topo e aproxima as ofertas. */
+@media(min-width:900px){
+  .store .marketplaceHero{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,.95fr);column-gap:32px;row-gap:6px;align-items:end;padding:12px 0 12px}
+  .store .marketplaceHero .eyebrow{grid-column:1;grid-row:1}
+  .store .marketplaceHero h1{grid-column:1;grid-row:2;font-size:clamp(27px,2.7vw,36px);line-height:1.08;margin:0}
+  .store .marketplaceHero p{grid-column:1;grid-row:3;margin:0;font-size:13px;line-height:1.3}
+  .store .marketplaceHero .storeSearch{grid-column:2;grid-row:2;max-width:none;margin:0}
+  .store .marketplaceHero .cats{grid-column:2;grid-row:3;margin:0;gap:6px}
+  .store .marketplaceHero .cats a{padding:6px 10px;font-size:11px}
+  .store .sectionTitle{padding-top:10px}
+  .store .affiliateNotice{margin:5px 0 8px}
+  .store .offerGrid{margin-top:8px}
+}
+@media(min-width:1250px){
+  .store .offerGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+  .store .offerCard>img,.store .placeholder{aspect-ratio:1.2/1}
+  .store .offerBody{padding:9px}
+  .store .offerBody h3{font-size:12.5px;min-height:31px}
+  .store .offerBody strong{font-size:18px;margin-bottom:7px}
+}
