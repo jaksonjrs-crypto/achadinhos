@@ -415,3 +415,15 @@
 
 /* v3.3.6 — fluxo operacional simplificado */
 .flowSteps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.flowSteps>div{display:flex;align-items:center;gap:8px;background:#fff;color:#172033;border:1px solid #dfe6e1;border-radius:12px;padding:10px}.flowSteps b{display:grid;place-items:center;width:24px;height:24px;border-radius:999px;background:#e6f6f0;color:#08785e;font-size:12px}.flowSteps span{font-size:12px;font-weight:700}.disclosureActions .secondaryMini:last-child{margin-left:auto}@media(max-width:720px){.flowSteps{grid-template-columns:repeat(2,minmax(0,1fr))}.disclosureActions .secondaryMini:last-child{margin-left:0}}
+
+/* Cabeçalho público compartilhado pela Vitrine e pela política */
+.publicHeader{position:sticky;top:0;z-index:60;background:var(--paper);border-bottom:1px solid #e3e8e4;box-shadow:0 3px 12px #102d2110}
+.publicHeaderInner{max-width:1180px;min-height:62px;margin:auto;padding:6px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.publicBrand{display:flex;align-items:center;min-width:0}
+.publicBrandLogo{display:block;width:155px;height:auto;max-height:48px;object-fit:contain;object-position:left center}
+.publicLinks{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.publicLinks a{color:var(--ink);font-size:12px;font-weight:800;padding:9px 11px;border-radius:8px;white-space:nowrap}
+.publicLinks a:hover,.publicLinks a.current{background:#e7f4ee;color:var(--brand)}
+.publicLinks a:focus-visible,.publicBrand:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.store #ofertas{scroll-margin-top:76px}
+@media(max-width:520px){.publicHeaderInner{min-height:56px;padding:5px 12px;gap:8px}.publicBrandLogo{width:126px;max-height:42px}.publicLinks a{font-size:11px;padding:8px 7px}}
