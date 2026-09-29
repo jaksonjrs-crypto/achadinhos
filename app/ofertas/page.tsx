@@ -1,5 +1,4 @@
 import { APP_VERSION } from "@/lib/version";
-import Image from "next/image";
 import { listPublishedOffers } from "@/lib/offers";
 import type { Metadata } from "next";
 
@@ -24,11 +23,6 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
   if(buscaNorm) visible=visible.filter((o:any)=>`${o.title} ${o.category} ${o.marketplace}`.toLocaleLowerCase("pt-BR").includes(buscaNorm));
 
   return <main className="store">
-    <header className="storeHeader">
-      <Image src="/brand/logo-horizontal.png" alt="Vitrine dos Achados" width={720} height={330} priority className="brandLogo"/>
-      <a className="pill" href="#ofertas">Ofertas do dia</a>
-    </header>
-
     <section className="hero marketplaceHero">
       <span className="eyebrow">ACHADOS QUE VALEM A PENA</span>
       <h1>Encontre boas ofertas em um só lugar.</h1>
