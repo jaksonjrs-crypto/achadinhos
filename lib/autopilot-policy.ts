@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto';
 import {db} from './db';
 import {brazilDate,ensurePublicationQueue} from './publication-queue';
 
-export type AutopilotPolicy={enabled:boolean;min_score:number;max_per_day:number;start_hour:number;end_hour:number;cooldown_days:number};
+export type AutopilotPolicy={enabled:boolean;min_score:number;max_per_day:number;start_hour:number;end_hour:number;cooldown_days:number;telegram_auto_publish:boolean};
 export async function getAutopilotPolicy():Promise<AutopilotPolicy>{
   const sql=db();
   await sql`CREATE TABLE IF NOT EXISTS autopilot_policy (
@@ -12,14 +12,16 @@ export async function getAutopilotPolicy():Promise<AutopilotPolicy>{
     start_hour INTEGER NOT NULL DEFAULT 9 CHECK (start_hour BETWEEN 0 AND 23),
     end_hour INTEGER NOT NULL DEFAULT 21 CHECK (end_hour BETWEEN 1 AND 24),
     cooldown_days INTEGER NOT NULL DEFAULT 7 CHECK (cooldown_days BETWEEN 1 AND 90),
+    telegram_auto_publish BOOLEAN NOT NULL DEFAULT FALSE,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     run_token TEXT,
     lease_until TIMESTAMPTZ
   )`;
   await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS run_token TEXT`;
   await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ`;
+  await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS telegram_auto_publish BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`INSERT INTO autopilot_policy(id) VALUES(1) ON CONFLICT DO NOTHING`;
-  const rows=await sql`SELECT enabled,min_score,max_per_day,start_hour,end_hour,cooldown_days FROM autopilot_policy WHERE id=1`;
+  const rows=await sql`SELECT enabled,min_score,max_per_day,start_hour,end_hour,cooldown_days,telegram_auto_publish FROM autopilot_policy WHERE id=1`;
   return rows[0] as AutopilotPolicy;
 }
 export function brazilHour(now=new Date()){
@@ -51,7 +53,7 @@ export async function runAutopilot(now=new Date()){
   // Lazy import avoids a dependency cycle with the candidate publishing flow.
   const {autopilotCandidate}=await import('./autopilot');
   const queue=candidates.length?await ensurePublicationQueue():null;
-  let published=0,pending=0,failed=0,queued=0;
+  let published=0,pending=0,failed=0,queued=0,telegramSent=0,telegramFailed=0;
   for(const c of candidates){
     const r=await autopilotCandidate(Number(c.id));
     if(!r.ok){failed++;continue}
@@ -61,9 +63,48 @@ export async function runAutopilot(now=new Date()){
     const rows=await queue!`INSERT INTO publication_tasks(offer_id,channel,cycle_date,status)
       VALUES(${r.offerId},'telegram',${date}::date,'ready')
       ON CONFLICT (offer_id,channel,cycle_date) DO NOTHING RETURNING id`;
-    if(rows.length)queued++;
+    if(rows.length){
+      queued++;
+      if(policy.telegram_auto_publish && process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID){
+        const taskId=Number(rows[0].id);
+        const claimedTask=await queue!`UPDATE publication_tasks
+          SET status='publishing',attempts=attempts+1,updated_at=NOW()
+          WHERE id=${taskId} AND status='ready' RETURNING id`;
+        if(claimedTask.length){
+          let accepted=false,externalId='';
+          try{
+            const offers=await queue!`SELECT title,price,status FROM offers WHERE id=${r.offerId} LIMIT 1`;
+            const offer:any=offers[0];
+            if(!offer||offer.status!=='published')throw new Error('Oferta indisponível.');
+            const token=process.env.TELEGRAM_BOT_TOKEN!.trim(),chatId=process.env.TELEGRAM_CHAT_ID!.trim();
+            const link=`https://www.minhavitrinedeachados.com.br/o/${r.offerId}?c=t`;
+            const message=`🔥 ${String(offer.title).slice(0,180)}\\n💰 ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(offer.price))}\\n🔗 ${link}\\n\\nPromoção sujeita a alteração.`;
+            const response=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{
+              method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({chat_id:chatId,text:message,disable_web_page_preview:false}),cache:'no-store'
+            });
+            const data=await response.json().catch(()=>({}));
+            if(!response.ok||!data.ok)throw new Error(`Telegram: ${String(data.description||response.status).slice(0,180)}`);
+            accepted=true;
+            externalId=String(data.result?.message_id||'');
+            await queue!`UPDATE publication_tasks SET status='published',external_id=${externalId||null},published_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=${taskId}`;
+            telegramSent++;
+          }catch(e:any){
+            if(accepted){
+              console.error('Telegram accepted but task update failed',{taskId,externalId,error:String(e?.message||e)});
+            }else{
+              const token=process.env.TELEGRAM_BOT_TOKEN?.trim();
+              const raw=String(e?.message||'Falha no Telegram');
+              const error=(token?raw.replaceAll(token,'[redacted]'):raw).slice(0,300);
+              await queue!`UPDATE publication_tasks SET status='failed',last_error=${error},updated_at=NOW() WHERE id=${taskId}`;
+              telegramFailed++;
+            }
+          }
+        }
+      }
+    }
   }
-  return {ok:true,ran:true,date,considered:candidates.length,published,pending,failed,queued,remaining:Math.max(0,remaining-published)};
+  return {ok:true,ran:true,date,considered:candidates.length,published,pending,failed,queued,telegramSent,telegramFailed,remaining:Math.max(0,remaining-published)};
   }finally{
     await sql`UPDATE autopilot_policy SET run_token=NULL,lease_until=NULL WHERE id=1 AND run_token=${token}`;
   }
