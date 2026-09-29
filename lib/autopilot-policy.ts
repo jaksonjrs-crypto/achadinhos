@@ -50,6 +50,7 @@ export async function runAutopilot(now=new Date()){
     ORDER BY c.score DESC,c.created_at ASC LIMIT ${remaining}`;
   // Lazy import avoids a dependency cycle with the candidate publishing flow.
   const {autopilotCandidate}=await import('./autopilot');
+  const queue=candidates.length?await ensurePublicationQueue():null;
   let published=0,pending=0,failed=0,queued=0;
   for(const c of candidates){
     const r=await autopilotCandidate(Number(c.id));
@@ -57,8 +58,7 @@ export async function runAutopilot(now=new Date()){
     if(!r.published||!r.offerId){pending++;continue}
     published++;
     // A fila registra a divulgação sem disparar uma mensagem antes de haver regras por canal.
-    const queue=await ensurePublicationQueue();
-    const rows=await queue`INSERT INTO publication_tasks(offer_id,channel,cycle_date,status)
+    const rows=await queue!`INSERT INTO publication_tasks(offer_id,channel,cycle_date,status)
       VALUES(${r.offerId},'telegram',${date}::date,'ready')
       ON CONFLICT (offer_id,channel,cycle_date) DO NOTHING RETURNING id`;
     if(rows.length)queued++;
