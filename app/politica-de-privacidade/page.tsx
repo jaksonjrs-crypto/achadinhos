@@ -17,7 +17,7 @@ export default function PrivacyPolicy(){
     <p>Os dados necessários à hospedagem, ao banco de dados e à integração com Pinterest são processados pelos respectivos fornecedores. Não vendemos os registros de cliques. Conservamos os dados pelo período necessário às finalidades descritas e à segurança do serviço, observadas as obrigações aplicáveis.</p>
     <h2>Seus direitos e contato</h2>
     <p>Você pode solicitar informações, acesso, correção ou exclusão de dados pessoais, quando aplicável. Para questões sobre privacidade, entre em contato pelo canal indicado abaixo.</p>
-    <p><strong>Responsável:</strong> Jakson Rodrigues Silva<br/><strong>Contato:</strong> <a href="mailto:Jakson.jrs@gmail.com">Jakson.jrs@gmail.com</a></p>
+    <p><strong>Responsável:</strong> Jakson Rodrigues Silva<br/><strong>Contato:</strong> <a href="mailto:privacidade@minhavitrinedeachados.com.br">privacidade@minhavitrinedeachados.com.br</a></p>
     <p>Podemos atualizar esta política para refletir mudanças no serviço. A versão vigente estará nesta página.</p>
   </main>;
 }
