@@ -80,7 +80,6 @@ export async function runAutopilot(now=new Date()){
             if(!offer||offer.status!=='published'||!productSafetyCheck(String(offer.title||'')).allowed)throw new Error('Oferta indisponível ou bloqueada.');
             externalId=await sendTelegramOffer(offer,r.offerId,'https://www.minhavitrinedeachados.com.br');
             accepted=true;
-            externalId=String(data.result?.message_id||'');
             await queue!`UPDATE publication_tasks SET status='published',external_id=${externalId||null},published_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=${taskId}`;
             telegramSent++;
           }catch(e:any){
