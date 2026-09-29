@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {db} from './db';
-import {brazilDate} from './publication-queue';
+import {brazilDate,ensurePublicationQueue} from './publication-queue';
 
 export type AutopilotPolicy={enabled:boolean;min_score:number;max_per_day:number;start_hour:number;end_hour:number;cooldown_days:number};
 export async function getAutopilotPolicy():Promise<AutopilotPolicy>{
@@ -50,9 +50,20 @@ export async function runAutopilot(now=new Date()){
     ORDER BY c.score DESC,c.created_at ASC LIMIT ${remaining}`;
   // Lazy import avoids a dependency cycle with the candidate publishing flow.
   const {autopilotCandidate}=await import('./autopilot');
-  let published=0,pending=0,failed=0;
-  for(const c of candidates){const r=await autopilotCandidate(Number(c.id));if(!r.ok)failed++;else if(r.published)published++;else pending++}
-  return {ok:true,ran:true,date,considered:candidates.length,published,pending,failed,remaining:Math.max(0,remaining-published)};
+  let published=0,pending=0,failed=0,queued=0;
+  for(const c of candidates){
+    const r=await autopilotCandidate(Number(c.id));
+    if(!r.ok){failed++;continue}
+    if(!r.published||!r.offerId){pending++;continue}
+    published++;
+    // A fila registra a divulgação sem disparar uma mensagem antes de haver regras por canal.
+    const queue=await ensurePublicationQueue();
+    const rows=await queue`INSERT INTO publication_tasks(offer_id,channel,cycle_date,status)
+      VALUES(${r.offerId},'telegram',${date}::date,'ready')
+      ON CONFLICT (offer_id,channel,cycle_date) DO NOTHING RETURNING id`;
+    if(rows.length)queued++;
+  }
+  return {ok:true,ran:true,date,considered:candidates.length,published,pending,failed,queued,remaining:Math.max(0,remaining-published)};
   }finally{
     await sql`UPDATE autopilot_policy SET run_token=NULL,lease_until=NULL WHERE id=1 AND run_token=${token}`;
   }
