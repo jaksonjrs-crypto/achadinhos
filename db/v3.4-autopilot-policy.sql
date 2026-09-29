@@ -7,10 +7,12 @@ CREATE TABLE IF NOT EXISTS autopilot_policy (
   start_hour INTEGER NOT NULL DEFAULT 9 CHECK (start_hour BETWEEN 0 AND 23),
   end_hour INTEGER NOT NULL DEFAULT 21 CHECK (end_hour BETWEEN 1 AND 24),
   cooldown_days INTEGER NOT NULL DEFAULT 7 CHECK (cooldown_days BETWEEN 1 AND 90),
+  telegram_auto_publish BOOLEAN NOT NULL DEFAULT FALSE,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   run_token TEXT,
   lease_until TIMESTAMPTZ
 );
 ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS run_token TEXT;
 ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ;
+ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS telegram_auto_publish BOOLEAN NOT NULL DEFAULT FALSE;
 INSERT INTO autopilot_policy(id) VALUES(1) ON CONFLICT DO NOTHING;
