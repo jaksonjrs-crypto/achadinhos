@@ -27,4 +27,4 @@
 5. Conferir preços e indisponibilidade antes de divulgar, revisar erros e confirmar recuperação de envios.
 
 ## Ativação
-Esta alteração ainda é proposta no GitHub. Nenhuma opção de produção foi ativada nesta sessão. Quando integrada e com Autopiloto habilitado, a próxima execução passa a capturar candidatos Shopee automaticamente. O envio Telegram continua condicionado à opção específica existente.
+Alteração publicada e integrada em main pelo PR #4, commit de merge c5dcbd356fabedf0ca41717311e4b57534ab19d0. O build de preview da Vercel passou. O deploy de produção ainda precisa ser confirmado. Nenhuma opção de produção foi ativada nesta sessão. Quando integrada e com Autopiloto habilitado, a próxima execução passa a capturar candidatos Shopee automaticamente. O envio Telegram continua condicionado à opção específica existente.
