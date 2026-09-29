@@ -69,7 +69,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
          </article>
        })}</div>}
     </section>
-    <footer>Vitrine dos Achados · Achados que valem a pena. <span>Preços e disponibilidade podem mudar no marketplace.</span></footer>
+    <footer>Vitrine dos Achados · Achados que valem a pena. <span>Preços e disponibilidade podem mudar no marketplace.</span> <a href="/politica-de-privacidade">Política de Privacidade</a></footer>
     <div className="publicVersion">{APP_VERSION}</div>
   </main>
 }
