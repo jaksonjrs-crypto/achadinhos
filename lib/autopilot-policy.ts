@@ -78,7 +78,7 @@ export async function runAutopilot(now=new Date()){
             if(!offer||offer.status!=='published')throw new Error('Oferta indisponível.');
             const token=process.env.TELEGRAM_BOT_TOKEN!.trim(),chatId=process.env.TELEGRAM_CHAT_ID!.trim();
             const link=`https://www.minhavitrinedeachados.com.br/o/${r.offerId}?c=t`;
-            const message=`🔥 ${String(offer.title).slice(0,180)}\\n💰 ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(offer.price))}\\n🔗 ${link}\\n\\nPromoção sujeita a alteração.`;
+            const message=`🔥 ${String(offer.title).slice(0,180)}\n💰 ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(offer.price))}\n🔗 ${link}\n\nPromoção sujeita a alteração.`;
             const response=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{
               method:'POST',headers:{'Content-Type':'application/json'},
               body:JSON.stringify({chat_id:chatId,text:message,disable_web_page_preview:false}),cache:'no-store'
