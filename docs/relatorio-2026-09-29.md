@@ -67,3 +67,12 @@ Alteração publicada e integrada em main pelo PR #4, commit de merge c5dcbd356f
 - Usuário confirmou que o identificador 18321581244 observado na URL é seu ID de afiliado Shopee.
 - Revisão para 01/10: confirmar execução pelo cron, ausência de duplicidades/falhas, cliques por canal e pedidos/comissões no painel Shopee. Cliques de testes internos não representam público novo. Vendas não são confirmadas pelo contador de cliques da plataforma.
 - A primeira venda é o objetivo comercial do piloto, sem garantia. A passagem definitiva depende da estabilidade comprovada; canais ainda não validados permanecem em teste.
+
+## Metricool — primeiro agendamento do piloto
+- Conector respondeu com a marca Vitrine dos Achados (7152643) e canais Facebook, Instagram, Pinterest e TikTok associados.
+- Agenda consultada antes da gravação: vazia no intervalo 29/09–01/10.
+- Post de apresentação da vitrine agendado no Facebook para 30/09/2026 às 12h de Brasília, com autoPublish=true e draft=false. ID 384619268, UUID 2598379851866590873.
+- Agendamento confirmado por nova consulta: PENDING. Não declarar publicação entregue até verificar o resultado após o horário.
+- Link divulgado: https://www.minhavitrinedeachados.com.br/ofertas. Sem mídia anexada neste primeiro teste de agendamento.
+- Planejador: https://app.metricool.com/planner/calendar?blogId=7152643&openWithPostUuid=2598379851866590873
+- A gravação pelo conector conversacional funciona; a fila da aplicação ainda não está integrada automaticamente ao Metricool. API HTTP exige plano Advanced/Custom; plano e token da conta permanecem não confirmados. Instagram/TikTok exigem mídia e Pinterest também exige board; ainda precisam de testes próprios.
