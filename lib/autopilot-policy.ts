@@ -1,5 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {db} from './db';
+import {productSafetyCheck} from './product-safety';
 import {brazilDate,ensurePublicationQueue} from './publication-queue';
 
 export type AutopilotPolicy={enabled:boolean;min_score:number;max_per_day:number;start_hour:number;end_hour:number;cooldown_days:number;telegram_auto_publish:boolean};
@@ -75,7 +76,7 @@ export async function runAutopilot(now=new Date()){
           try{
             const offers=await queue!`SELECT title,price,status FROM offers WHERE id=${r.offerId} LIMIT 1`;
             const offer:any=offers[0];
-            if(!offer||offer.status!=='published')throw new Error('Oferta indisponível.');
+            if(!offer||offer.status!=='published'||!productSafetyCheck(String(offer.title||'')).allowed)throw new Error('Oferta indisponível ou bloqueada.');
             const token=process.env.TELEGRAM_BOT_TOKEN!.trim(),chatId=process.env.TELEGRAM_CHAT_ID!.trim();
             const link=`https://www.minhavitrinedeachados.com.br/o/${r.offerId}?c=t`;
             const message=`🔥 ${String(offer.title).slice(0,180)}\n💰 ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(offer.price))}\n🔗 ${link}\n\nPromoção sujeita a alteração.`;
