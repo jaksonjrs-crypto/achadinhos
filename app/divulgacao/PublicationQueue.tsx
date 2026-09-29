@@ -37,7 +37,14 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
   async function copy(t:Task){try{await navigator.clipboard.writeText(`${location.origin}/go/${t.offer_id}?channel=${t.channel}`);setMessage("Link rastreado copiado.")}catch{setMessage("Não foi possível copiar o link.")}}
   async function checkChannels(){
     setDiagnostic("Verificando…");
-    try{const r=await fetch('/api/channels/diagnostic',{cache:'no-store'});const d=await r.json();setDiagnostic(`Pinterest: ${d.pinterest?.ok?'API respondeu':d.pinterest?.configured?'Conexão pendente ou falhou':'não configurado'} · Telegram: ${d.telegram?.ok?'bot e canal acessíveis':d.telegram?.configured?'verificação falhou':'não configurado'}`)}catch{setDiagnostic('Não foi possível verificar os canais.')}
+    try{
+      const r=await fetch('/api/channels/diagnostic',{cache:'no-store'});
+      if(!r.ok)throw new Error('Falha na verificação.');
+      const d=await r.json();
+      const pinterest=d.pinterest?.ok?'API respondeu':d.pinterest?.configured?'Conexão pendente ou falhou':'não configurado';
+      const telegram=d.telegram?.ok?`bot autorizado a publicar em ${d.telegram.chat||'canal configurado'}`:d.telegram?.error||'não configurado';
+      setDiagnostic(`Pinterest: ${pinterest} · Telegram: ${telegram}`);
+    }catch{setDiagnostic('Não foi possível verificar os canais.')}
   }
   async function publish(t:Task){
     setBusy(true);setMessage("");
