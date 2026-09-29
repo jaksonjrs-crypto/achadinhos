@@ -50,3 +50,12 @@ Alteração publicada e integrada em main pelo PR #4, commit de merge c5dcbd356f
 - Teste real do novo botão bloqueado antes da execução pela revisão automática de aprovação: exige autorização específica para publicar ofertas na vitrine e enviar mensagens Telegram. Nenhuma execução disparada por esse clique.
 - Facebook: apresentação corrigida e botão Saiba mais configurado para a vitrine.
 - Pendente: teste completo do Autopiloto, confirmação do cron de 30/09 às 12h, integração e validação Metricool/redes, preços e disponibilidade e versão estável com rollback.
+
+## Publicação real autorizada e teste de links
+- Usuário autorizou uma publicação real e o teste dos links até a Shopee.
+- Executar agora retornou: Shopee 1 novo candidato; vitrine 1 publicada; Telegram 1 enviada; 0 falhas de envio, 0 pendentes Telegram e 0 falhas de ofertas.
+- Oferta 29: Parafusadeira Furadeira 25V Nakasaki Sem Fio a Bateria Profissional Kit Completo com Maleta, R$ 85,00 no momento da captura.
+- Oferta visível na vitrine pública; tarefa Telegram confirmada CONCLUÍDO. Outros cinco canais permanecem PRONTO, sem publicação confirmada.
+- Link Telegram /o/29?c=t e botão da vitrine /go/29?channel=vitrine chegaram à Shopee com destino product/728389176/58217601055 e parâmetros utm_medium=affiliates e utm_source=an_18321581244 preservados.
+- A Shopee exibiu Login Necessário neste navegador. O nome da loja vendedora e a associação do identificador de afiliado à conta Vitrine dos Achados não foram confirmados; parâmetros presentes não comprovam comissão.
+- Pendente: confirmar loja e conta de afiliado após autenticação Shopee, primeira execução pelo cron de 30/09 às 12h de Brasília e publicação automática dos outros canais.
