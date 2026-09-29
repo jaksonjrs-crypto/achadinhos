@@ -42,3 +42,11 @@ Alteração publicada e integrada em main pelo PR #4, commit de merge c5dcbd356f
 - Oferta Escama De Peixe Pano De Limpeza enviada uma vez pela API; painel confirmou publicação e fila Concluído.
 - Autopiloto e envio Telegram ativados e salvos: score 80, máximo 3 ofertas/dia, horário permitido 9h–21h, repetição 7 dias. Próximo horário programado: 30/09/2026 às 12h de Brasília. Primeira execução automática ainda não verificada.
 - Metricool pelo navegador ainda sem login. Usuário escolheu Facebook; revisão automática bloqueou a autenticação por solicitação ampla de permissões (publicação, mensagens, anúncios e gerenciamento de negócios). Necessária autorização específica ou escolha do usuário por login direto Metricool.
+
+## Continuação — execução pelo painel
+- Consulta Shopee real repetida com sucesso: 20 produtos, 17 abaixo do corte, 3 duplicados, 0 importados e 0 bloqueados.
+- Bot Telegram confirmado autorizado pelo diagnóstico; quatro tarefas de envios anteriores aparecem concluídas.
+- PR #5 integrado: botão Executar agora, sessão administrativa e verificação de origem, mesmas regras do cron e contadores do resultado. Typecheck, build e testes de proteção passaram. Novo botão verificado em produção.
+- Teste real do novo botão bloqueado antes da execução pela revisão automática de aprovação: exige autorização específica para publicar ofertas na vitrine e enviar mensagens Telegram. Nenhuma execução disparada por esse clique.
+- Facebook: apresentação corrigida e botão Saiba mais configurado para a vitrine.
+- Pendente: teste completo do Autopiloto, confirmação do cron de 30/09 às 12h, integração e validação Metricool/redes, preços e disponibilidade e versão estável com rollback.
