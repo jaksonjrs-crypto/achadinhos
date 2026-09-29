@@ -36,7 +36,7 @@ export async function fetchShopeeProducts(page=1,limit=20,keyword?:string){
   const variables:any={page,limit};
   if(keyword?.trim()) variables.keyword=keyword.trim();
   const body=JSON.stringify({query:QUERY,variables});
-  const res=await fetch(ENDPOINT,{method:"POST",headers:signedHeaders(body),body,cache:"no-store"});
+  const res=await fetch(ENDPOINT,{method:"POST",headers:signedHeaders(body),body,cache:"no-store",signal:AbortSignal.timeout(15000)});
   const json=await res.json().catch(()=>({}));
   if(!res.ok) throw new Error(`Shopee HTTP ${res.status}`);
   if(json?.errors?.length) throw new Error(json.errors[0]?.message || "Erro da Shopee API");
