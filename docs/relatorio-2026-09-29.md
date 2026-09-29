@@ -59,3 +59,11 @@ Alteração publicada e integrada em main pelo PR #4, commit de merge c5dcbd356f
 - Link Telegram /o/29?c=t e botão da vitrine /go/29?channel=vitrine chegaram à Shopee com destino product/728389176/58217601055 e parâmetros utm_medium=affiliates e utm_source=an_18321581244 preservados.
 - A Shopee exibiu Login Necessário neste navegador. O nome da loja vendedora e a associação do identificador de afiliado à conta Vitrine dos Achados não foram confirmados; parâmetros presentes não comprovam comissão.
 - Pendente: confirmar loja e conta de afiliado após autenticação Shopee, primeira execução pelo cron de 30/09 às 12h de Brasília e publicação automática dos outros canais.
+
+## Piloto comercial — 29 e 30/09/2026
+- Usuário definiu o restante de setembro como fase de teste, visando a primeira venda, com intenção de operação definitiva no início de outubro.
+- Configuração em produção reconfirmada no painel: execução diária e Telegram habilitados; score 80; máximo 3 novas ofertas/dia; janela 9h–21h Brasília; prevenção de repetição por 7 dias.
+- Escopo operacional validado: Shopee → vitrine → Telegram. Outros canais continuam pendentes; não declarar automação completa.
+- Usuário confirmou que o identificador 18321581244 observado na URL é seu ID de afiliado Shopee.
+- Revisão para 01/10: confirmar execução pelo cron, ausência de duplicidades/falhas, cliques por canal e pedidos/comissões no painel Shopee. Cliques de testes internos não representam público novo. Vendas não são confirmadas pelo contador de cliques da plataforma.
+- A primeira venda é o objetivo comercial do piloto, sem garantia. A passagem definitiva depende da estabilidade comprovada; canais ainda não validados permanecem em teste.
