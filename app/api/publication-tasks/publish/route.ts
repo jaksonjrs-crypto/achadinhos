@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {ensurePublicationQueue} from "@/lib/publication-queue";
 import {pinterestFetch} from "@/lib/pinterest";
 import {productSafetyCheck} from "@/lib/product-safety";
+import {sendTelegramOffer} from "@/lib/telegram-publisher";
 export const dynamic="force-dynamic";
 
 export async function POST(req:NextRequest){
@@ -22,13 +23,7 @@ export async function POST(req:NextRequest){
       if(!offer||offer.status!=='published'||!productSafetyCheck(String(offer.title||'')).allowed) throw new Error("Oferta indisponível ou bloqueada.");
       const link=`${new URL(req.url).origin}/o/${offerId}?c=${channel==='telegram'?'t':'p'}`;
       if(channel==='telegram'){
-        const token=process.env.TELEGRAM_BOT_TOKEN?.trim(),chatId=process.env.TELEGRAM_CHAT_ID?.trim();
-        if(!token||!chatId) throw new Error("Bot e canal do Telegram não configurados.");
-        const message=`🔥 ${String(offer.title).slice(0,180)}\n💰 ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(offer.price))}\n🔗 ${link}\n\nPromoção sujeita a alteração.`;
-        const r=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,text:message,disable_web_page_preview:false}),cache:'no-store'});
-        const data=await r.json().catch(()=>({}));
-        if(!r.ok||!data.ok) throw new Error(`Telegram: ${String(data.description||r.status).slice(0,180)}`);
-        externalId=String(data.result?.message_id||'');
+        externalId=await sendTelegramOffer(offer,offerId,new URL(req.url).origin);
       }else if(channel==='pinterest'){
         const boardId=String(body.boardId||'').trim();
         if(!boardId||!offer.image_url) throw new Error("Escolha uma pasta e verifique a imagem da oferta.");
