@@ -45,11 +45,12 @@ export async function POST(req:Request){
         skippedUnsafe++; continue;
       }
       const externalId=String(p.itemId||"").trim()||null;
-      const existingCatalog=externalId?await sql`SELECT id FROM offers WHERE marketplace='Shopee' AND external_id=${externalId} LIMIT 1`:[];
+      const existingCatalog=await sql`SELECT id FROM offers WHERE marketplace='Shopee'
+        AND (external_id=${externalId} OR LOWER(TRIM(title))=LOWER(TRIM(${title}))) LIMIT 1`;
       if(existingCatalog.length){skippedDuplicate++;continue}
-      const existing=externalId
-        ? await sql`SELECT id FROM product_candidates WHERE marketplace='Shopee' AND external_id=${externalId} LIMIT 1`
-        : await sql`SELECT id FROM product_candidates WHERE marketplace='Shopee' AND product_url=${affiliateUrl} LIMIT 1`;
+      const existing=await sql`SELECT id FROM product_candidates WHERE marketplace='Shopee'
+        AND (external_id=${externalId} OR product_url=${affiliateUrl}
+          OR LOWER(TRIM(title))=LOWER(TRIM(${title}))) LIMIT 1`;
       if(existing.length){skippedDuplicate++;continue}
       const candidateScore=score(p);
       const rating=num(p.ratingStar);
