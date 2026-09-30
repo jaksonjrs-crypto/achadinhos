@@ -24,9 +24,14 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
   },[reload]);
   async function action(body:Record<string,unknown>){
     setBusy(true);setMessage("");
-    try{const r=await fetch("/api/publication-tasks",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||"Falha ao atualizar fila");await reload();setMessage(body.action==="enqueue"?"Item incluído na fila.":"Estado atualizado.")}
+    try{const r=await fetch("/api/publication-tasks",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||"Falha ao atualizar fila");await reload();setMessage(body.action==="enqueue"?"Item incluído na fila.":body.action==="reopen"?"Item devolvido à fila. Nenhuma publicação foi enviada.":body.status==="published"?"Publicação manual registrada. Este botão não envia conteúdo à rede.":"Estado atualizado.")}
     catch(e:any){setMessage(e?.message||"Falha ao atualizar fila")}
     finally{setBusy(false)}
+  }
+  function markManual(t:Task){
+    if(window.confirm(`Você já publicou esta oferta no ${labels[t.channel]||t.channel}? Este botão apenas registra a publicação feita por você; não envia conteúdo à rede.`)){
+      void action({action:"mark",id:t.id,status:"published"});
+    }
   }
   async function remove(t:Task){
     setBusy(true);setMessage("");
@@ -62,7 +67,7 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
       <button className="mini publish" disabled={busy||!offerId} onClick={()=>action({action:"enqueue",offerId:Number(offerId),channel,scheduledAt:when?new Date(when).toISOString():null})}>Adicionar à fila</button>
     </div>
     {connections.pinterest?.connected&&boards.length>0&&<label className="queueBoard">Pasta do Pinterest <select value={boardId} onChange={e=>setBoardId(e.target.value)}>{boards.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
-    <p className="muted">Pinterest: {connections.pinterest?.connected?"conectado":"conexão pendente"} · Telegram: {connections.telegram?.configured?"bot configurado":"bot pendente"} · Instagram, Facebook, WhatsApp e TikTok: envio assistido.</p>
+    <p className="muted">Pinterest: {connections.pinterest?.connected?"conectado":"conexão pendente"} · Telegram: {connections.telegram?.configured?"bot configurado":"bot pendente"} · Instagram, Facebook, WhatsApp e TikTok: publicação manual no aplicativo. “Já publiquei manualmente” apenas registra uma publicação que você já fez.</p>
     <button className="mini secondaryMini" type="button" onClick={checkChannels}>Verificar APIs</button>{diagnostic&&<p role="status" className="muted">{diagnostic}</p>}
     {message&&<p role="status" className="noticeBox">{message}</p>}
     {tasks.length===0?<div className="empty">A fila está vazia. Escolha uma oferta e um canal para começar.</div>:
@@ -74,7 +79,8 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
         <button className="mini secondaryMini" disabled={busy} onClick={()=>copy(t)}>Copiar link</button>
         {((t.channel==="pinterest"&&connections.pinterest?.connected&&boardId)||(t.channel==="telegram"&&connections.telegram?.configured))&&["ready","scheduled"].includes(t.status)&&<button className="mini publish" disabled={busy} onClick={()=>publish(t)}>Publicar pela API</button>}
         {t.channel==="whatsapp"&&<a className="mini" target="_blank" rel="noopener noreferrer" href={`https://wa.me/?text=${encodeURIComponent(`${t.title}\nConfira: ${origin}/go/${t.offer_id}?channel=whatsapp`)}`}>Abrir WhatsApp</a>}
-        {!["telegram","pinterest"].includes(t.channel)&&t.status!=="published"&&<button className="mini publish" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"published"})}>Marcar envio manual</button>}
+        {!["telegram","pinterest"].includes(t.channel)&&t.status!=="published"&&<button className="mini publish" disabled={busy} onClick={()=>markManual(t)}>Já publiquei manualmente</button>}
+        {["instagram","facebook","whatsapp","tiktok"].includes(t.channel)&&t.status==="published"&&t.attempts===0&&<button className="mini secondaryMini" disabled={busy} onClick={()=>action({action:"reopen",id:t.id})}>Voltar à fila</button>}
         {t.status!=="skipped"&&t.status!=="published"&&<button className="mini secondaryMini" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"skipped"})}>Ignorar</button>}
         {["skipped","failed"].includes(t.status)&&<button className="mini secondaryMini" disabled={busy} onClick={()=>action({action:"mark",id:t.id,status:"ready"})}>Reabrir</button>}
         {t.attempts===0&&["ready","scheduled","skipped"].includes(t.status)&&<button className="mini secondaryMini" disabled={busy} onClick={()=>remove(t)}>Remover</button>}
