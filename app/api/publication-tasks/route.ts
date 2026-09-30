@@ -23,6 +23,14 @@ export async function POST(req:NextRequest){
         ON CONFLICT (offer_id,channel,cycle_date) DO NOTHING RETURNING id`;
       return NextResponse.json({ok:rows.length>0,created:rows.length>0,error:rows.length?null:"Oferta indisponível ou já incluída neste dia."},{status:rows.length?201:409});
     }
+    if(body.action==="reopen"){
+      const id=Number(body.id);
+      if(!Number.isSafeInteger(id)||id<1) return NextResponse.json({ok:false,error:"Item inválido."},{status:400});
+      const rows=await sql`UPDATE publication_tasks SET status='ready',published_at=NULL,scheduled_at=NULL,last_error=NULL,updated_at=NOW()
+        WHERE id=${id} AND status='published' AND channel IN ('instagram','facebook','whatsapp','tiktok')
+        AND attempts=0 AND external_id IS NULL RETURNING id`;
+      return NextResponse.json({ok:rows.length>0,error:rows.length?null:"Só uma marcação manual sem envio pela API pode voltar à fila."},{status:rows.length?200:409});
+    }
     if(body.action==="mark"){
       const id=Number(body.id),status=String(body.status||"");
       if(!Number.isSafeInteger(id)||id<1||!["ready","published","skipped"].includes(status)) return NextResponse.json({ok:false,error:"Estado inválido."},{status:400});
