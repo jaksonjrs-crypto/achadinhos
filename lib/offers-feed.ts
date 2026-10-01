@@ -27,7 +27,7 @@ export function buildOffersFeed(offers: Offer[], channel: FeedChannel, now = new
 ${items.map(o => {
     const link = `${SITE}/oferta/${o.id}?channel=${channel}`;
     const title = o.title.length > 80 ? o.title.slice(0, 79).trim() + '…' : o.title;
-    const description = `${money.format(o.price)}. Promoção sujeita a alteração a qualquer momento. Podemos receber comissão pelas compras feitas pelos links, sem custo adicional para você. #VitrineDosAchados #Achadinhos #Ofertas`;
+    const description = `${title}\n${money.format(o.price)}. Preço pode mudar.\nLink de afiliado: podemos receber comissão, sem custo extra para você.\n#VitrineDosAchados`;
     // Identity is tied to the offer, never to its price or last update.
     return `<item><title>${xml(title)}</title><link>${xml(link)}</link><guid isPermaLink="true">${xml(link)}</guid><description>${xml(description)}</description><pubDate>${new Date(o.created_at).toUTCString()}</pubDate></item>`;
   }).join('\n')}
