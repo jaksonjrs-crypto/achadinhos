@@ -33,3 +33,21 @@ Typecheck e build passaram. Testes simulados confirmaram início às 8h, bloquei
 Documentação:
 https://vercel.com/docs/cron-jobs/usage-and-pricing
 https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
+
+## Revisão das redes em 01/10
+- Usuário confirmou que recebeu corretamente a oferta #33 no Telegram.
+- Diagnóstico real Verificar APIs: Pinterest não configurado; Telegram autorizado a publicar no canal Vitrine dos Achados | Ofertas. Não há evidência de aprovação ou reprovação da API própria Pinterest.
+- Portal Pinterest My apps redirecionou para account-setup sem sessão autenticada. Aprovação da aplicação não pôde ser consultada.
+- Metricool getBrandSettings: marca 7152643 tem Facebook, Instagram minhavitrinedosachados, Pinterest jack_vitrine_dos_achados e TikTok Vitrine dos Achados conectados; isso não comprova publicação em todos os canais.
+- getScheduledPosts retornou publicação de apresentação de 30/09 com Facebook PUBLISHED, detailedStatus Published e URL pública https://facebook.com/122099963373493651/posts/122100866265493651. Confirmação do provedor; publicação não foi inspecionada no Facebook nesta revisão.
+- API própria Pinterest Trial cria Pins visíveis apenas ao criador; Standard é necessário para validar publicação pública pela aplicação.
+- Caminho proposto para acelerar: validar Pins e imagens por Metricool; avaliar feed RSS das ofertas públicas para autolistas, com IDs estáveis, link rastreado por canal, imagens Open Graph corretas e repetição desligada. Feed não existe no código atual e autolista não foi configurada. Confirmar recursos/limites do plano, publicar teste e reconciliar fila antes de declarar operação automática.
+- API HTTP Metricool requer Advanced/Custom; conector conversacional disponível em qualquer plano. Nenhuma compra ou assinatura solicitada.
+- Compartilhamento direto da Shopee facilita ação manual; não foi identificado agendamento autônomo nesse botão. Parcerias Meta/Shopee com marcação de produto são outro recurso: Instagram exige elegibilidade, incluindo conta profissional pública e ao menos 1.000 seguidores conforme documentação consultada. Elegibilidade da conta não verificada.
+- Próximos passos: confirmar acesso Pinterest ou validar via Metricool; testar publicação pública por canal; implementar alimentação automática e confirmar cliques. TikTok depende de criativo compatível; WhatsApp continua manual na plataforma.
+
+Referências:
+https://developers.pinterest.com/docs/key-concepts/access-tiers/
+https://help.metricool.com/how-to-link-an-rss-feed-to-an-autolist-ank6m
+https://help.metricool.com/mcp-vs-api-access-what-is-the-difference-5y3ib
+https://help.shopee.com.br/portal/10/article/223917-Entenda-como-funciona-a-Parceria-com-Afiliados-do-Instagram?previousPage=secondary+category
