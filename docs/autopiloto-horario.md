@@ -1,53 +1,67 @@
-# Autopiloto horário — 01/10/2026
+# Piloto da Vitrine dos Achados — 01/10/2026
 
-Solicitação: iniciar às 8h de Brasília e consultar a Shopee a cada hora.
+## Resultado
+Rotina horária em produção. Telegram recebido pelo usuário. Facebook, Instagram e Pinterest tiveram publicações reais confirmadas pelo provedor via Metricool. Autolistas RSS semanais ativadas. Ainda falta observar o próximo ciclo com oferta nova entrando pelo feed e sendo publicada em cada rede. Primeira venda não confirmada.
 
-## Publicado
-- PR #6 integrado: e064b64383eee1f45d8a0b415e3704768f5335a1.
-- Deployment de produção dpl_Fo8ThRaPvnWLi5s1w7wTJmBU9XVC confirmado READY, com domínio www.minhavitrinedeachados.com.br.
-- Workflow GitHub Actions na branch main: buscas das 8h05 às 20h05 de Brasília. GitHub pode atrasar execuções; não garante horário exato.
-- Regra de produção conferida: ativado, Telegram automático, score 80, máximo 3 novas ofertas/dia, início 8h, fim 21h exclusivo, prevenção de repetição por 7 dias.
-- Consulta Shopee continua após atingir o limite, sem novas publicações naquele dia.
-- Cron diário do Autopiloto removido da Vercel. Atualização diária de catálogo preservada.
+## Shopee → vitrine → Telegram
+- GitHub Actions busca às 08h05–20h05 de Brasília, a cada hora; GitHub pode atrasar execuções.
+- Primeira execução schedule: 01/10 às 10h26, run 36868628784, job 110390352057, sucesso em 12 segundos.
+- Resultado: ran=true, discovery_ok=true, imported=0, published=0, telegramSent=0, failed=0, telegramFailed=0, remaining=2.
+- Sem oferta nova nessa execução: nenhuma mensagem Telegram adicional era esperada.
+- Autenticação GitHub → Vercel validada; nenhum segredo registrado.
+- Teste anterior pelo painel: oferta #33 Percarbonato, 1 importação, 1 publicação na vitrine, 1 envio Telegram, 0 falhas. Usuário confirmou recebimento.
+- Política: habilitado, Telegram automático, score mínimo 80, até 3 ofertas/dia, janela 08h–21h, prevenção de repetição por 7 dias.
+- Consulta continua após atingir limite; catálogo diário preservado.
 
-## Credenciais
-O usuário informou que salvou a nova credencial na Vercel como CRON_SECRET de Production e no GitHub como AUTOPILOT_CRON_SECRET. Os valores não foram lidos, copiados ou registrados pelo assistente. O deploy de produção ocorreu depois dessa confirmação. A igualdade e autenticação entre serviços ainda dependem de uma execução real pelo GitHub.
+## Metricool
+Fuso America/Sao_Paulo. Plano observado: 20 publicações/mês. Nenhuma assinatura comprada.
 
-## Teste real concluído pelo painel
-Executar agora, na versão nova: Shopee importou 1 candidato; vitrine publicou 1 oferta; Telegram enviou 1 mensagem; 0 falhas de envio e 0 falhas de ofertas. Oferta #33: Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas. Fila confirmou Telegram de 01/10 como Concluído; os cinco outros canais dessa oferta estão Pronto. Isso verifica a rotina e envio Telegram, não autenticação do agendador GitHub.
+| Rede | Cadência |
+|---|---|
+| Instagram | Quarta às 12h |
+| Pinterest | Quinta às 10h45, quadro Vitrine dos Achados |
+| Facebook | Sexta às 12h |
 
-## Agendamento ainda aguardando confirmação
-GitHub exibiu o workflow Autopiloto Shopee por hora e 0 execuções. Navegador sem sessão autenticada impede workflow_dispatch por UI. Uma tentativa de acrescentar gatilho push para teste imediato foi rejeitada pela revisão automática por poder disparar publicações em produção; nenhuma alteração desse gatilho foi aplicada. Usou-se o botão existente do painel para o teste seguro, sem mudar permissões ou gerar novos gatilhos.
+- Três autolistas ativadas, repetição desligada; Instagram com publicação automática ligada.
+- Feed por canal: /ofertas/feed?channel=facebook, instagram ou pinterest.
+- No máximo 1 oferta por semana/rede: a mais recente elegível publicada antes das 08h do dia da rede e dentro da semana anterior. Sem oferta elegível, não há item novo.
+- Seleção congelada por semana evita fila crescente de promoções antigas; GUID estável por oferta/canal.
+- Somente ofertas públicas, com preço válido e imagem HTTPS; sem credenciais ou URL privada de afiliado no XML.
+- Texto inclui produto, preço, aviso de alteração e indicação de comissão. Imagem obtida do Open Graph da oferta.
+- Primeira atualização do Metricool importou 23 ofertas antigas apesar da opção inicial desmarcada. Restantes desativadas individualmente: painel final mostrou as três listas ativadas e 0 itens ativos.
+- Primeiro Pin publicado foi a oferta #9, carregador portátil, da primeira importação. Teste manual adicional do Pinterest desativado para evitar repetição.
+- Cadência de 3 posts/semana deixa margem para testes no plano atual.
+- Instagram: URL em legenda não é botão de compra. Melhorar acesso pelo perfil/SmartLink permanece pendente.
 
-Confirmar a primeira execução do schedule, resultado HTTP autenticado, contadores e estado da fila antes de declarar a rotina horária validada. Não repetir envios com resposta inconclusiva.
+## Testes reais
+- Pinterest, 10h45: PUBLISHED, oferta #9 com imagem e link.
+  https://www.pinterest.es/pin/747316131961331273
+  Página pública carregou sem autenticação e mostrou o Pin, imagem e botão f.mtr.cool. Encurtador verificado apontando para a vitrine.
+- Facebook, 10h46: PUBLISHED, oferta #33 com imagem original e link rastreado.
+  https://facebook.com/122099963373493651/posts/122101773843493651
+  /go/33?channel=facebook abriu Shopee com HTTP 200 e identificador de afiliado esperado na URL final.
+- Instagram, 10h47: PUBLISHED, oferta #33 com imagem original.
+  https://www.instagram.com/p/Dd9DRkwCOXK/
+  Confirmação do provedor; página Instagram não inspecionada nesta revisão.
+- Teste real por canal não comprova todos os próximos ciclos automáticos.
 
-## Evidências para operação definitiva
-- Execução agendada Shopee → vitrine → Telegram com sucesso e limites respeitados.
-- Ausência de erros e ofertas repetidas nas execuções seguintes.
-- Cliques por canal e pedido/comissão no painel Shopee do afiliado 18321581244.
-- Primeira venda ainda não confirmada; demais redes precisam de validação. Não declarar todas automatizadas.
+## Código e produção
+- PR #7 integrado: feed RSS e documentação.
+- 6cb0f5f478dee6e3091e9d61d02243d8d51919eb: título e aviso na legenda.
+- d63499711d6fcf6f093083f9e3018abfb75bc4e4: seleção semanal.
+- Deployment dpl_DF77rrfaBsbbwwoXr5WwEREwLP7j READY em produção.
+- Typecheck e build do feed inicial passaram. Testes da seleção semanal: corte às 08h, seleção estável entre atualizações, máximo de 1 item e ausência de reaproveitamento após janela.
+- XML lido pelo Metricool e usado em Pin real.
+- Revisão automática bloqueou tentativa Facebook sem imagem; nenhum post criado nessa tentativa. Teste completo com imagem posteriormente publicado.
 
-## Validação de código
-Typecheck e build passaram. Testes simulados confirmaram início às 8h, bloqueio antes das 8h e às 21h, busca após o limite sem novos envios e bloqueio de execuções simultâneas. YAML e sintaxe Python validados. Workflow sem checkout, sem permissões de escrita e sem execução em PRs; credencial somente no cabeçalho para o endpoint de produção, sem redirecionamentos, impressão de segredo ou retries.
+## Pendências para operação definitiva
+1. Observar próximo ciclo com oferta nova por RSS/autolista em cada rede; acompanhar erros, duplicidades e validade de preços.
+2. Reconciliar fila local de divulgação com Metricool: RSS não marca tarefas locais como Concluído. Evitar reenvio manual de itens já publicados.
+3. Medir cliques por canal e confirmar pedidos/comissões no painel Shopee. Primeira venda ainda não confirmada.
+4. Melhorar caminho de compra no Instagram pelo perfil/SmartLink e iniciar engajamento.
+5. TikTok e WhatsApp ainda precisam de fluxo e validação. Mercado Livre não está confirmado automático.
+6. Aplicação própria Pinterest mostrada pelo usuário permanece Trial pendente; Metricool publicou independentemente disso.
+7. Em falhas prolongadas, revisar a fila Metricool antes de retomar: o RSS limita a entrada, mas não remove posts já importados que envelheceram.
 
-Documentação:
-https://vercel.com/docs/cron-jobs/usage-and-pricing
-https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
-
-## Revisão das redes em 01/10
-- Usuário confirmou que recebeu corretamente a oferta #33 no Telegram.
-- Diagnóstico real Verificar APIs: Pinterest não configurado; Telegram autorizado a publicar no canal Vitrine dos Achados | Ofertas. Não há evidência de aprovação ou reprovação da API própria Pinterest.
-- Portal Pinterest My apps redirecionou para account-setup sem sessão autenticada. Aprovação da aplicação não pôde ser consultada.
-- Metricool getBrandSettings: marca 7152643 tem Facebook, Instagram minhavitrinedosachados, Pinterest jack_vitrine_dos_achados e TikTok Vitrine dos Achados conectados; isso não comprova publicação em todos os canais.
-- getScheduledPosts retornou publicação de apresentação de 30/09 com Facebook PUBLISHED, detailedStatus Published e URL pública https://facebook.com/122099963373493651/posts/122100866265493651. Confirmação do provedor; publicação não foi inspecionada no Facebook nesta revisão.
-- API própria Pinterest Trial cria Pins visíveis apenas ao criador; Standard é necessário para validar publicação pública pela aplicação.
-- Caminho proposto para acelerar: validar Pins e imagens por Metricool; avaliar feed RSS das ofertas públicas para autolistas, com IDs estáveis, link rastreado por canal, imagens Open Graph corretas e repetição desligada. Feed não existe no código atual e autolista não foi configurada. Confirmar recursos/limites do plano, publicar teste e reconciliar fila antes de declarar operação automática.
-- API HTTP Metricool requer Advanced/Custom; conector conversacional disponível em qualquer plano. Nenhuma compra ou assinatura solicitada.
-- Compartilhamento direto da Shopee facilita ação manual; não foi identificado agendamento autônomo nesse botão. Parcerias Meta/Shopee com marcação de produto são outro recurso: Instagram exige elegibilidade, incluindo conta profissional pública e ao menos 1.000 seguidores conforme documentação consultada. Elegibilidade da conta não verificada.
-- Próximos passos: confirmar acesso Pinterest ou validar via Metricool; testar publicação pública por canal; implementar alimentação automática e confirmar cliques. TikTok depende de criativo compatível; WhatsApp continua manual na plataforma.
-
-Referências:
-https://developers.pinterest.com/docs/key-concepts/access-tiers/
-https://help.metricool.com/how-to-link-an-rss-feed-to-an-autolist-ank6m
-https://help.metricool.com/mcp-vs-api-access-what-is-the-difference-5y3ib
-https://help.shopee.com.br/portal/10/article/223917-Entenda-como-funciona-a-Parceria-com-Afiliados-do-Instagram?previousPage=secondary+category
+Execução:
+https://github.com/jaksonjrs-crypto/achadinhos/actions/runs/36868628784
