@@ -12,7 +12,7 @@ export async function getAutopilotPolicy():Promise<AutopilotPolicy>{
     id INTEGER PRIMARY KEY CHECK (id=1),enabled BOOLEAN NOT NULL DEFAULT FALSE,
     min_score INTEGER NOT NULL DEFAULT 80 CHECK (min_score BETWEEN 0 AND 100),
     max_per_day INTEGER NOT NULL DEFAULT 3 CHECK (max_per_day BETWEEN 1 AND 20),
-    start_hour INTEGER NOT NULL DEFAULT 9 CHECK (start_hour BETWEEN 0 AND 23),
+    start_hour INTEGER NOT NULL DEFAULT 8 CHECK (start_hour BETWEEN 0 AND 23),
     end_hour INTEGER NOT NULL DEFAULT 21 CHECK (end_hour BETWEEN 1 AND 24),
     cooldown_days INTEGER NOT NULL DEFAULT 7 CHECK (cooldown_days BETWEEN 1 AND 90),
     telegram_auto_publish BOOLEAN NOT NULL DEFAULT FALSE,
@@ -44,7 +44,6 @@ export async function runAutopilot(now=new Date()){
   const dayStart=new Date(`${date}T00:00:00-03:00`),dayEnd=new Date(dayStart.getTime()+86400000);
   const count=await sql`SELECT COUNT(*)::int AS total FROM offers WHERE status='published' AND created_at>=${dayStart.toISOString()} AND created_at<${dayEnd.toISOString()}`;
   const remaining=Math.max(0,policy.max_per_day-Number(count[0]?.total||0));
-  if(!remaining)return {ok:true,ran:false,reason:'Limite diário atingido',date};
   // Automatic discovery is limited to the official Shopee connector. A failed
   // discovery must not prevent already approved offers from being processed.
   let discovery:Awaited<ReturnType<typeof importShopeeCandidates>>|{ok:false;reason:string}={ok:false,reason:'Credenciais Shopee ausentes'};
@@ -52,6 +51,9 @@ export async function runAutopilot(now=new Date()){
     try{discovery=await importShopeeCandidates({limit:10,minScore:policy.min_score,autoApprove:true})}
     catch{discovery={ok:false,reason:'Consulta Shopee falhou; verificar acesso à API'}}
   }
+  // Keep searching within the allowed hours even after the publication budget
+  // is exhausted. Approved candidates wait for a later day; no extra sends.
+  if(!remaining)return {ok:true,ran:true,reason:'Limite diário atingido; busca realizada sem novas publicações',date,discovery,published:0,pending:0,failed:0,queued:0,queuedTasks:0,telegramSent:0,telegramFailed:0,remaining:0};
   const candidates=await sql`SELECT c.id,c.title,c.marketplace,c.external_id FROM product_candidates c
     WHERE c.status='approved' AND c.score>=${policy.min_score}
       AND c.image_url IS NOT NULL AND c.product_url IS NOT NULL AND c.price>0

@@ -1,6 +1,6 @@
 {
   "crons": [
     { "path": "/api/catalog/cron", "schedule": "17 6 * * *" },
-    { "path": "/api/autopilot/cron", "schedule": "0 15 * * *" }
+    { "path": "/api/autopilot/cron", "schedule": "0 * * * *" }
   ]
 }
