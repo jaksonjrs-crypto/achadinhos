@@ -2,25 +2,34 @@
 
 Solicitação: iniciar às 8h de Brasília e consultar a Shopee a cada hora.
 
-## Alteração preparada
-- GitHub Actions a cada hora, das 8h05 às 20h05 de Brasília; a rotina também aplica a janela salva no painel. O GitHub pode atrasar execuções sob carga; não garante horário exato.
-- Início padrão de novas configurações: 8h. A configuração existente foi salva no painel com Início = 8; o padrão SQL não altera o registro atual.
-- Fim atual: 21h, exclusivo (última busca às 20h).
-- Manter máximo de 3 novas publicações/dia e prevenção de repetição por 7 dias.
-- Continuar consultando candidatos após atingir o limite de publicações, sem enviar mais ofertas naquele dia.
-- Trava de concorrência e autenticação do cron preservadas.
+## Publicado
+- PR #6 integrado: e064b64383eee1f45d8a0b415e3704768f5335a1.
+- Deployment de produção dpl_Fo8ThRaPvnWLi5s1w7wTJmBU9XVC confirmado READY, com domínio www.minhavitrinedeachados.com.br.
+- Workflow GitHub Actions na branch main: buscas das 8h05 às 20h05 de Brasília. GitHub pode atrasar execuções; não garante horário exato.
+- Regra de produção conferida: ativado, Telegram automático, score 80, máximo 3 novas ofertas/dia, início 8h, fim 21h exclusivo, prevenção de repetição por 7 dias.
+- Consulta Shopee continua após atingir o limite, sem novas publicações naquele dia.
+- Cron diário do Autopiloto removido da Vercel. Atualização diária de catálogo preservada.
 
-## Validação
-Typecheck e build passaram. Testes simulados confirmaram início às 8h, bloqueio antes das 8h e às 21h, busca após o limite sem novos envios e bloqueio de execuções simultâneas.
+## Credenciais
+O usuário informou que salvou a nova credencial na Vercel como CRON_SECRET de Production e no GitHub como AUTOPILOT_CRON_SECRET. Os valores não foram lidos, copiados ou registrados pelo assistente. O deploy de produção ocorreu depois dessa confirmação. A igualdade e autenticação entre serviços ainda dependem de uma execução real pelo GitHub.
 
-## Ativação pendente
-Vercel confirmou plano Hobby e rejeitou a versão com cron horário antes do deploy. A alternativa usa GitHub Actions com o secret de repositório AUTOPILOT_CRON_SECRET, cujo valor deve corresponder ao CRON_SECRET da Vercel. O usuário autorizou expressamente guardar o CRON_SECRET no GitHub. Não integrar até configurar o segredo. Ao integrar, a Vercel mantém apenas a atualização diária de catálogo; o Actions passa a disparar o Autopiloto.
+## Teste real concluído pelo painel
+Executar agora, na versão nova: Shopee importou 1 candidato; vitrine publicou 1 oferta; Telegram enviou 1 mensagem; 0 falhas de envio e 0 falhas de ofertas. Oferta #33: Percarbonato 100% Puro Tira Manchas Roupas Brancas e Coloridas. Fila confirmou Telegram de 01/10 como Concluído; os cinco outros canais dessa oferta estão Pronto. Isso verifica a rotina e envio Telegram, não autenticação do agendador GitHub.
 
-O workflow não acessa o conteúdo do repositório nem recebe permissões de escrita; não roda em pull requests. A credencial é enviada somente ao endpoint de produção, sem seguir redirecionamentos, sem imprimir o segredo e sem repetir requisições inconclusivas.
+## Agendamento ainda aguardando confirmação
+GitHub exibiu o workflow Autopiloto Shopee por hora e 0 execuções. Navegador sem sessão autenticada impede workflow_dispatch por UI. Uma tentativa de acrescentar gatilho push para teste imediato foi rejeitada pela revisão automática por poder disparar publicações em produção; nenhuma alteração desse gatilho foi aplicada. Usou-se o botão existente do painel para o teste seguro, sem mudar permissões ou gerar novos gatilhos.
 
-Validar primeiro com workflow_dispatch, conferir fila e Telegram e então confirmar uma execução agendada. Em repositórios públicos, o GitHub desativa schedules após 60 dias sem atividade.
+Confirmar a primeira execução do schedule, resultado HTTP autenticado, contadores e estado da fila antes de declarar a rotina horária validada. Não repetir envios com resposta inconclusiva.
 
-Em 01/10, o painel administrativo foi acessado e Início=8 foi salvo. Ao tentar transferir a credencial, a Vercel mostrou Copy to Clipboard desabilitado e informou que Secret é write-only: o valor salvo não pode ser revelado. Nenhum segredo foi copiado, transmitido ou alterado. GitHub no navegador estava sem sessão autenticada. A ativação aguarda o valor original guardado pelo proprietário e autenticação no GitHub; se o original não existir, é necessária a troca coordenada da credencial nos dois serviços. PR #6 permanece sem integração, mantendo o cron diário de produção. Não declarar rotina horária em produção antes de configurar o segredo, confirmar deploy e validar execução real. Primeira venda/comissão e demais redes ainda não confirmadas.
+## Evidências para operação definitiva
+- Execução agendada Shopee → vitrine → Telegram com sucesso e limites respeitados.
+- Ausência de erros e ofertas repetidas nas execuções seguintes.
+- Cliques por canal e pedido/comissão no painel Shopee do afiliado 18321581244.
+- Primeira venda ainda não confirmada; demais redes precisam de validação. Não declarar todas automatizadas.
 
-Documentação: https://vercel.com/docs/cron-jobs/usage-and-pricing
+## Validação de código
+Typecheck e build passaram. Testes simulados confirmaram início às 8h, bloqueio antes das 8h e às 21h, busca após o limite sem novos envios e bloqueio de execuções simultâneas. YAML e sintaxe Python validados. Workflow sem checkout, sem permissões de escrita e sem execução em PRs; credencial somente no cabeçalho para o endpoint de produção, sem redirecionamentos, impressão de segredo ou retries.
+
+Documentação:
+https://vercel.com/docs/cron-jobs/usage-and-pricing
 https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
