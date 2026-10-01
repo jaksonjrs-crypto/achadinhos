@@ -1,0 +1,59 @@
+name: Autopiloto Shopee por hora
+
+on:
+  schedule:
+    # 08:05–20:05 in Brasília. Off the hour to reduce scheduler congestion.
+    - cron: '5 11-23 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: autopilot-production
+  cancel-in-progress: false
+
+jobs:
+  discover-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Executar rotina autenticada
+        env:
+          AUTOPILOT_CRON_SECRET: ${{ secrets.AUTOPILOT_CRON_SECRET }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys, urllib.request, urllib.error
+          secret = os.environ.get('AUTOPILOT_CRON_SECRET', '').strip()
+          if not secret:
+              sys.exit('Configure o secret AUTOPILOT_CRON_SECRET antes de ativar a rotina.')
+          request = urllib.request.Request(
+              'https://www.minhavitrinedeachados.com.br/api/autopilot/cron',
+              headers={'Authorization': 'Bearer ' + secret},
+              method='GET',
+          )
+          # Do not forward the credential to redirects or retry uncertain sends.
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+          try:
+              with urllib.request.build_opener(NoRedirect()).open(request, timeout=70) as response:
+                  result = json.load(response)
+          except urllib.error.HTTPError as error:
+              sys.exit('Falha HTTP ' + str(error.code) + '; verificar serviço/autenticação.')
+          except Exception:
+              sys.exit('Resposta inconclusiva; conferir a fila antes de repetir o envio.')
+          if result.get('ok') is not True:
+              sys.exit('A rotina informou falha; conferir a fila e os logs do serviço.')
+          fields = ('ran', 'published', 'pending', 'failed', 'telegramSent', 'telegramFailed', 'remaining')
+          summary = {key: result[key] for key in fields if isinstance(result.get(key), (bool, int))}
+          discovery = result.get('discovery')
+          if isinstance(discovery, dict):
+              summary['discovery_ok'] = discovery.get('ok') is True
+              if isinstance(discovery.get('imported'), int):
+                  summary['imported'] = discovery['imported']
+          print(json.dumps(summary))
+          if result.get('failed', 0) or result.get('telegramFailed', 0):
+              sys.exit('Execução terminou com falhas; conferir fila.')
+          if isinstance(discovery, dict) and discovery.get('ok') is False:
+              sys.exit('Consulta Shopee falhou; conferir acesso à API.')
+          PY
