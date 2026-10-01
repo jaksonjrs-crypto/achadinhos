@@ -9,13 +9,22 @@ const xml = (value: unknown) => String(value ?? '')
 
 export function buildOffersFeed(offers: Offer[], channel: FeedChannel, now = new Date()) {
   const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  // Freeze one offer per weekly slot at 08:00 Brasilia (UTC-3).
+  // This keeps RSS intake within the pilot cadence instead of building an aging daily backlog.
+  const day = { instagram: 3, pinterest: 4, facebook: 5 }[channel];
+  const cutoff = new Date(now);
+  cutoff.setUTCHours(11, 0, 0, 0);
+  cutoff.setUTCDate(cutoff.getUTCDate() - (cutoff.getUTCDay() - day + 7) % 7);
+  if (cutoff > now) cutoff.setUTCDate(cutoff.getUTCDate() - 7);
+  const windowStart = cutoff.getTime() - 7 * 86400000;
   const items = offers.filter(o => {
     const created = new Date(o.created_at).getTime();
     let imageIsPublic = false;
     try { imageIsPublic = new URL(String(o.image_url)).protocol === 'https:'; } catch {}
     return o.status === 'published' && o.price > 0 && Number.isFinite(o.price) && imageIsPublic
-      && Number.isFinite(created) && created <= now.getTime() && created >= now.getTime() - 14 * 86400000;
-  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 30);
+      && Number.isFinite(created) && created <= cutoff.getTime() && created > windowStart
+      && created >= now.getTime() - 14 * 86400000;
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 1);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>
 <title>Vitrine dos Achados — ${xml(channel)}</title>
