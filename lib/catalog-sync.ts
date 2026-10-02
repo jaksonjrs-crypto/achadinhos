@@ -35,6 +35,21 @@ export async function findShopeeProduct(itemId:string,_title:string,fetchProduct
   return (data.nodes||[]).find((x:any)=>String(x.itemId)===itemId)||null;
 }
 
+export function syncFailureMessage(error:any,stage:string){
+  if(error?.name==="TimeoutError"||error?.name==="AbortError")return "Tempo excedido ao "+(stage==="identify"?"identificar o link.":stage==="query"?"consultar a Shopee.":"salvar o preço.");
+  if(stage==="save"){
+    if(error?.code==="23505")return "Este produto já está vinculado a outra oferta. Preço mantido; cadastro precisa de revisão de duplicidade.";
+    return `Falha ao salvar no banco${/^\w{5}$/.test(String(error?.code||""))?` (código ${error.code})`:""}. Preço não confirmado.`;
+  }
+  let message=String(error?.message||"Erro de conexão");
+  // Only surface API/link errors, never database connection strings or credentials.
+  for(const secret of [process.env.SHOPEE_SECRET,process.env.SHOPEE_APP_ID]){
+    if(secret)message=message.split(secret).join("[oculto]");
+  }
+  message=message.replace(/https?:\/\/[^\s]+/g,"[endereço omitido]").slice(0,220);
+  return `${stage==="query"?"Consulta Shopee":"Identificação do link"}: ${message}. Preço mantido.`;
+}
+
 export async function syncCatalog(limit=40,dependencies={db,fetchProducts:fetchShopeeProducts}){
   const sql=dependencies.db();
   const rows=await sql`SELECT o.id,o.title,o.external_id,o.product_id,o.price,o.affiliate_url,
@@ -49,12 +64,14 @@ export async function syncCatalog(limit=40,dependencies={db,fetchProducts:fetchS
   for(const o of rows as any[]){
     const id=Number(o.id);
     let itemId=String(o.external_id||o.product_external_id||o.candidate_external_id||shopeeItemId(o.affiliate_url)||"").trim();
+    let stage="identify";
     try{
       if(!itemId)itemId=await resolveShopeeItemId(String(o.affiliate_url||""))||"";
       if(!/^\d+$/.test(itemId)){
         await sql`UPDATE offers SET sync_status='unlinked',last_synced_at=NOW() WHERE id=${id}`;
         unlinked++;details.push({id,title:o.title,status:"unlinked",message:"Sem identificação do produto. Vincule o ID da Shopee em Corrigir oferta."});continue;
       }
+      stage="query";
       const p=await findShopeeProduct(itemId,String(o.title),dependencies.fetchProducts);
       if(!p){await sql`UPDATE offers SET sync_status='not_found',last_synced_at=NOW() WHERE id=${id}`;failed++;details.push({id,title:o.title,status:"not_found",message:"Produto não encontrado na API; preço mantido."});continue}
       const price=n(p.price) ?? n(p.priceMin);
@@ -66,12 +83,13 @@ export async function syncCatalog(limit=40,dependencies={db,fetchProducts:fetchS
         queries.push(sql`UPDATE products SET price=${price},original_price=${orig},sold_quantity=${n(p.sales)},updated_at=NOW() WHERE id=${Number(o.product_id)}`);
         if(old!==price)queries.push(sql`INSERT INTO price_history(product_id,price,original_price) VALUES(${Number(o.product_id)},${price},${orig})`);
       }
+      stage="save";
       await sql.transaction(queries);
       old!==price?updated++:unchanged++;
       details.push({id,title:o.title,status:old!==price?"updated":"unchanged",message:old!==price?"Preço atualizado.":"API retornou o mesmo preço. Cupons e variações podem ter valores diferentes."});
-    }catch{
+    }catch(error:any){
       failed++;await sql`UPDATE offers SET sync_status='error',last_synced_at=NOW() WHERE id=${id}`;
-      details.push({id,title:o.title,status:"error",message:"Falha ao consultar ou salvar. Preço não confirmado; tente novamente."});
+      details.push({id,title:o.title,status:"error",message:syncFailureMessage(error,stage)});
     }
   }
   return {checked:rows.length,updated,unchanged,failed,unlinked,unsupported:0,details};

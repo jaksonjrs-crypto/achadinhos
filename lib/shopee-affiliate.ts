@@ -44,6 +44,6 @@ export async function fetchShopeeProducts(page=1,limit=20,keyword?:string,itemId
   const res=await fetch(ENDPOINT,{method:"POST",headers:signedHeaders(body),body,cache:"no-store",signal:AbortSignal.timeout(15000)});
   const json=await res.json().catch(()=>({}));
   if(!res.ok) throw new Error(`Shopee HTTP ${res.status}`);
-  if(json?.errors?.length) throw new Error(json.errors[0]?.message || "Erro da Shopee API");
+  if(json?.errors?.length) throw new Error(`Shopee API${json.errors[0]?.extensions?.code||json.errors[0]?.code?` [${json.errors[0]?.extensions?.code||json.errors[0]?.code}]`:""}: ${json.errors[0]?.message || "Erro na consulta"}`);
   return json?.data?.productOfferV2 ?? {nodes:[],pageInfo:null};
 }
