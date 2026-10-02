@@ -15,10 +15,12 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
     const affiliate=String(form.get("affiliate_url")||"").trim();
     const price=Number(String(form.get("price")||"").replace(",",".")), originalRaw=String(form.get("original_price")||"").replace(",",".");
     const original=originalRaw?Number(originalRaw):null;
+    const externalId=String(form.get("external_id")||"").trim()||null;
+    if(marketplace.toLowerCase()==="shopee" && externalId && !/^\d+$/.test(externalId))return NextResponse.json({error:"ID Shopee inválido: use o ID numérico do anúncio."},{status:400});
     if(!title||!affiliate||!Number.isFinite(price)||price<=0)return NextResponse.json({error:"Dados inválidos"},{status:400});
     if(!productSafetyCheck(title,category).allowed)return NextResponse.json({error:"Categoria de produto não permitida neste projeto."},{status:400});
     for(const [label,value] of [["Link",affiliate],["Imagem",image]] as const){if(value){try{const u=new URL(value);if(!["http:","https:"].includes(u.protocol))throw 0}catch{return NextResponse.json({error:`${label} inválido`},{status:400})}}}
-    await sql`UPDATE offers SET title=${title},category=${category},marketplace=${marketplace},image_url=${image||null},price=${price},original_price=${original},affiliate_url=${affiliate},updated_at=NOW() WHERE id=${offerId}`;
+    await sql`UPDATE offers SET title=${title},category=${category},marketplace=${marketplace},image_url=${image||null},price=${price},original_price=${original},affiliate_url=${affiliate},external_id=${externalId},sync_status=${externalId?"linked":"unlinked"},updated_at=NOW() WHERE id=${offerId}`;
   }
   else if(action==="publish"){
     const rows=await sql`SELECT title,category,image_url,price,affiliate_url FROM offers WHERE id=${offerId} LIMIT 1`;
