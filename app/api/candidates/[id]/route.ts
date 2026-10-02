@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from "next/server";
 import {db} from "@/lib/db";
 import {productSafetyCheck} from "@/lib/product-safety";
+import {queueManualOffers} from "@/lib/publication-queue";
 import {autopilotCandidate} from "@/lib/autopilot";
 
 export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>}){
@@ -35,6 +36,7 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
  if(action==="promote"||action==="approve"){
    const result=await autopilotCandidate(candidateId);
    if(!result.ok)return NextResponse.json({error:result.reason||"Falha no Autopiloto"},{status:400});
+   if(result.published&&result.offerId){try{await queueManualOffers(result.offerId)}catch{console.error("Oferta publicada; inclusão na fila pendente.")}}
    const target=result.published?`/garimpo-inteligente?autopilot_published=1`:`/garimpo-inteligente?autopilot_pending=1`;
    return NextResponse.redirect(new URL(target,req.url),303);
  }

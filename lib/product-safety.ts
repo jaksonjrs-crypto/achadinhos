@@ -12,6 +12,10 @@ const BLOCKED_TERMS=[
 
 export function productSafetyCheck(...parts:(string|null|undefined)[]){
   const text=parts.filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
-  const matches=BLOCKED_TERMS.filter(term=>text.includes(term));
+  // "Vinho" can describe a clothing color, as in "Vestido ... Vinho Único".
+  // Keep the beverage restriction when the listing mentions alcohol/volume.
+  const wineColor=/\b(vestido|blusa|camisa|calça|calca|short|bermuda|saia|body|roupa)\b/.test(text)
+    &&!/(garrafa|bebida|alco[oó]l|espumante|cabernet|merlot|vinho do porto|vinho tinto|vinho seco|\d+\s*(ml|litros?)\b)/.test(text);
+  const matches=BLOCKED_TERMS.filter(term=>text.includes(term)&&!(term==='vinho'&&wineColor));
   return {allowed:matches.length===0,matches};
 }
