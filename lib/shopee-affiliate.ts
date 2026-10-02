@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 
 const ENDPOINT="https://open-api.affiliate.shopee.com.br/graphql";
 
-const QUERY=`query ProductOfferV2($page:Int,$limit:Int,$keyword:String,$itemId:Int64){
-  productOfferV2(page:$page,limit:$limit,keyword:$keyword,itemId:$itemId){
+const QUERY=`query ProductOfferV2($page:Int,$limit:Int,$keyword:String){
+  productOfferV2(page:$page,limit:$limit,keyword:$keyword){
     nodes{
       productName itemId commissionRate commission price sales imageUrl shopName
       productLink offerLink periodStartTime periodEndTime priceMin priceMax
@@ -32,15 +32,23 @@ function signedHeaders(body:string){
   };
 }
 
-export async function fetchShopeeProducts(page=1,limit=20,keyword?:string,itemId?:string){
-  const variables:any={page,limit};
-  if(keyword?.trim()) variables.keyword=keyword.trim();
+export function shopeeProductPayload(page=1,limit=20,keyword?:string,itemId?:string){
   if(itemId){
-    const id=Number(itemId);
-    if(!/^\d+$/.test(itemId)||!Number.isSafeInteger(id)||id<=0)throw new Error("ID Shopee inválido.");
-    variables.itemId=id;
+    if(!/^[1-9]\d*$/.test(itemId)||BigInt(itemId)>BigInt("9223372036854775807"))throw new Error("ID Shopee inválido.");
+    // Shopee Explorer V2 emits Int64 as a GraphQL integer literal. The API
+    // rejects this custom scalar when supplied as a JSON numeric variable (10010).
+    const query=QUERY
+      .replace("query ProductOfferV2($page:Int,$limit:Int,$keyword:String)","query ProductOfferV2")
+      .replace("productOfferV2(page:$page,limit:$limit,keyword:$keyword)",`productOfferV2(page:1,limit:1,itemId:${itemId})`);
+    return {query};
   }
-  const body=JSON.stringify({query:QUERY,variables});
+  const variables:any={page,limit};
+  if(keyword?.trim())variables.keyword=keyword.trim();
+  return {query:QUERY,variables};
+}
+
+export async function fetchShopeeProducts(page=1,limit=20,keyword?:string,itemId?:string){
+  const body=JSON.stringify(shopeeProductPayload(page,limit,keyword,itemId));
   const res=await fetch(ENDPOINT,{method:"POST",headers:signedHeaders(body),body,cache:"no-store",signal:AbortSignal.timeout(15000)});
   const json=await res.json().catch(()=>({}));
   if(!res.ok) throw new Error(`Shopee HTTP ${res.status}`);
