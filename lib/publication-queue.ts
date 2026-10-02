@@ -32,7 +32,7 @@ export async function ensurePublicationQueue(){
 }
 
 // Manual registrations use the same channel queue as discovered offers. A
-// previously queued offer is not re-enqueued on page refresh or a price edit.
+// previously queued channel is not re-enqueued on refresh or a price edit.
 export async function queueManualOffers(offerId?:number,date=brazilDate()){
   const sql=await ensurePublicationQueue();
   const offers=await sql`SELECT id,title,category,image_url,affiliate_url,price FROM offers o
@@ -40,7 +40,8 @@ export async function queueManualOffers(offerId?:number,date=brazilDate()){
       AND (${offerId??null}::bigint IS NULL OR id=${offerId??null}::bigint)
       AND price>0 AND NULLIF(TRIM(title),'') IS NOT NULL AND NULLIF(TRIM(image_url),'') IS NOT NULL
       AND NULLIF(TRIM(affiliate_url),'') IS NOT NULL
-      AND NOT EXISTS(SELECT 1 FROM publication_tasks t WHERE t.offer_id=o.id)
+      AND EXISTS(SELECT 1 FROM unnest(ARRAY['telegram','pinterest','instagram','facebook','whatsapp','tiktok']) AS channels(channel)
+        WHERE NOT EXISTS(SELECT 1 FROM publication_tasks t WHERE t.offer_id=o.id AND t.channel=channels.channel))
     ORDER BY created_at DESC,id DESC LIMIT 120`;
   let queued=0,queuedTasks=0;
   for(const o of offers){
@@ -52,7 +53,7 @@ export async function queueManualOffers(offerId?:number,date=brazilDate()){
     const rows=await sql`INSERT INTO publication_tasks(offer_id,channel,cycle_date,status)
       SELECT ${o.id},channels.channel,${date}::date,'ready'
       FROM unnest(ARRAY['telegram','pinterest','instagram','facebook','whatsapp','tiktok']) AS channels(channel)
-      WHERE NOT EXISTS(SELECT 1 FROM publication_tasks WHERE offer_id=${o.id})
+      WHERE NOT EXISTS(SELECT 1 FROM publication_tasks WHERE offer_id=${o.id} AND channel=channels.channel)
       ON CONFLICT(offer_id,channel,cycle_date) DO NOTHING RETURNING id`;
     if(rows.length){queued++;queuedTasks+=rows.length}
   }
