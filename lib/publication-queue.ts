@@ -36,7 +36,7 @@ export async function ensurePublicationQueue(){
 export async function queueManualOffers(offerId?:number,date=brazilDate()){
   const sql=await ensurePublicationQueue();
   const offers=await sql`SELECT id,title,category,image_url,affiliate_url,price FROM offers o
-    WHERE status='published' AND opportunity_score IS NULL
+    WHERE status='published' AND (opportunity_score IS NULL OR id=${offerId??null}::bigint)
       AND (${offerId??null}::bigint IS NULL OR id=${offerId??null}::bigint)
       AND price>0 AND NULLIF(TRIM(title),'') IS NOT NULL AND NULLIF(TRIM(image_url),'') IS NOT NULL
       AND NULLIF(TRIM(affiliate_url),'') IS NOT NULL
