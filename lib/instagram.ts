@@ -16,7 +16,9 @@ async function graph(path: string, init?: RequestInit) {
   const url = new URL(`https://graph.facebook.com/${GRAPH_VERSION}${path}`);
   if (init?.method !== "POST") url.searchParams.set("access_token", token);
   const headers = new Headers(init?.headers);
-  if (init?.method === "POST") headers.set("Authorization", `Bearer ${token}`);
+  if (init?.method === "POST" && init.body instanceof URLSearchParams) {
+    init.body.set("access_token", token);
+  }
   return fetch(url, { ...init, headers, cache: "no-store" });
 }
 
