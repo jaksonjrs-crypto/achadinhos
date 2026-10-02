@@ -1,4 +1,5 @@
 import {db} from "./db";
+import {productSafetyCheck} from "./product-safety";
 
 export const CHANNELS=["pinterest","instagram","facebook","telegram","whatsapp","tiktok"] as const;
 export type Channel=typeof CHANNELS[number];
@@ -30,7 +31,36 @@ export async function ensurePublicationQueue(){
   return sql;
 }
 
+// Manual registrations use the same channel queue as discovered offers. A
+// previously queued offer is not re-enqueued on page refresh or a price edit.
+export async function queueManualOffers(offerId?:number,date=brazilDate()){
+  const sql=await ensurePublicationQueue();
+  const offers=await sql`SELECT id,title,category,image_url,affiliate_url,price FROM offers o
+    WHERE status='published' AND opportunity_score IS NULL
+      AND (${offerId??null}::bigint IS NULL OR id=${offerId??null}::bigint)
+      AND price>0 AND NULLIF(TRIM(title),'') IS NOT NULL AND NULLIF(TRIM(image_url),'') IS NOT NULL
+      AND NULLIF(TRIM(affiliate_url),'') IS NOT NULL
+      AND NOT EXISTS(SELECT 1 FROM publication_tasks t WHERE t.offer_id=o.id)
+    ORDER BY created_at DESC,id DESC LIMIT 120`;
+  let queued=0,queuedTasks=0;
+  for(const o of offers){
+    if(!productSafetyCheck(String(o.title||''),String(o.category||'')).allowed)continue;
+    try{
+      if(!['http:','https:'].includes(new URL(String(o.affiliate_url)).protocol)
+        ||!['http:','https:'].includes(new URL(String(o.image_url)).protocol))continue;
+    }catch{continue}
+    const rows=await sql`INSERT INTO publication_tasks(offer_id,channel,cycle_date,status)
+      SELECT ${o.id},channels.channel,${date}::date,'ready'
+      FROM unnest(ARRAY['telegram','pinterest','instagram','facebook','whatsapp','tiktok']) AS channels(channel)
+      WHERE NOT EXISTS(SELECT 1 FROM publication_tasks WHERE offer_id=${o.id})
+      ON CONFLICT(offer_id,channel,cycle_date) DO NOTHING RETURNING id`;
+    if(rows.length){queued++;queuedTasks+=rows.length}
+  }
+  return {queued,queuedTasks};
+}
+
 export async function listPublicationTasks(){
+  await queueManualOffers();
   const sql=await ensurePublicationQueue();
   const rows=await sql`SELECT t.id,t.offer_id,t.channel,t.cycle_date,t.status,t.scheduled_at,t.published_at,
     t.external_id,t.last_error,t.attempts,o.title,o.price,o.image_url,o.marketplace

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { queueManualOffers } from "@/lib/publication-queue";
 import { productSafetyCheck } from "@/lib/product-safety";
 
 export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>}){
@@ -39,5 +40,6 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
   else if(action==="feature") await sql`UPDATE offers SET featured=TRUE, updated_at=NOW() WHERE id=${offerId}`;
   else if(action==="unfeature") await sql`UPDATE offers SET featured=FALSE, updated_at=NOW() WHERE id=${offerId}`;
   else return NextResponse.json({error:"Ação inválida"},{status:400});
+  if(action==="publish"||action==="edit"){try{await queueManualOffers(offerId)}catch{console.error("Oferta salva; inclusão na fila pendente.")}}
   return NextResponse.redirect(new URL('/central',req.url),303);
 }

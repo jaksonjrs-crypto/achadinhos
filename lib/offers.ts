@@ -26,6 +26,9 @@ export async function listPublishedOffers():Promise<Offer[]>{
     const product=o.product_id==null?"":String(o.product_id);
     const external=o.external_id?`${market}:${String(o.external_id).trim()}`:"";
     let link=""; try{const u=new URL(String(o.affiliate_url||""));u.search="";u.hash="";link=u.toString().replace(/\/$/,"")}catch{}
+    // Distinct manual ML products can intentionally share the affiliate store
+    // URL. Product identity and title still prevent actual duplicate cards.
+    if(market==='mercado livre'&&!product&&!external)link="";
     const titleKey=`${market}:${title}`;
     if((product&&productIds.has(product))||(external&&externalIds.has(external))||(link&&links.has(link))||titles.has(titleKey)) return false;
     if(product)productIds.add(product); if(external)externalIds.add(external); if(link)links.add(link); titles.add(titleKey);

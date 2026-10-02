@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { queueManualOffers } from "@/lib/publication-queue";
 import { productSafetyCheck } from "@/lib/product-safety";
 
 export async function POST(req:NextRequest){
@@ -24,7 +25,8 @@ export async function POST(req:NextRequest){
   if(status==="published"&&!image)return NextResponse.json({error:"Inclua uma imagem antes de publicar."},{status:400});
 
   const sql=db();
-  await sql`INSERT INTO offers(title,category,marketplace,image_url,price,original_price,affiliate_url,status)
-    VALUES(${title},${category},${marketplace},${image||null},${price},${original},${affiliate},${status})`;
+  const inserted=await sql`INSERT INTO offers(title,category,marketplace,image_url,price,original_price,affiliate_url,status)
+    VALUES(${title},${category},${marketplace},${image||null},${price},${original},${affiliate},${status}) RETURNING id`;
+  if(status==="published"){try{await queueManualOffers(Number(inserted[0].id))}catch{console.error("Oferta salva; inclusão na fila pendente.")}}
   return NextResponse.redirect(new URL("/central",req.url),303);
 }

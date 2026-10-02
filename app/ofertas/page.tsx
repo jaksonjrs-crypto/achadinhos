@@ -14,12 +14,22 @@ const money=(v:number)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency
 export default async function OfertasPage({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){
   const params=await searchParams;
   const selected=String(params.categoria||"").trim();
+  const marketplace=String(params.marketplace||"").trim();
+  const marketplaces=["Shopee","Mercado Livre"];
   const busca=String(params.busca||"").trim();
+  const menuUrl=(category="",market="",search=busca)=>{
+    const query=new URLSearchParams();
+    if(category)query.set("categoria",category);
+    if(market)query.set("marketplace",market);
+    if(search)query.set("busca",search);
+    return `/ofertas${query.size?`?${query.toString()}`:""}#ofertas`;
+  };
   const buscaNorm=busca.toLocaleLowerCase("pt-BR");
   let offers:any[]=[]; let unavailable=false;
   try{offers=await listPublishedOffers()}catch{unavailable=true}
-  const categories=Array.from(new Set(offers.map((o:any)=>String(o.category||"").trim()).filter(Boolean))).sort();
+  const categories=Array.from(new Set(offers.map((o:any)=>String(o.category||"").trim()).filter((c:string)=>Boolean(c)&&!marketplaces.some(m=>m.toLocaleLowerCase("pt-BR")===c.toLocaleLowerCase("pt-BR"))))).sort();
   let visible=selected?offers.filter((o:any)=>String(o.category||"")===selected):offers;
+  if(marketplace)visible=visible.filter((o:any)=>String(o.marketplace||"").trim().toLocaleLowerCase("pt-BR")===marketplace.toLocaleLowerCase("pt-BR"));
   if(buscaNorm) visible=visible.filter((o:any)=>`${o.title} ${o.category} ${o.marketplace}`.toLocaleLowerCase("pt-BR").includes(buscaNorm));
 
   return <main className="store">
@@ -28,26 +38,27 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
       <h1>Encontre boas ofertas em um só lugar.</h1>
       <p>Seleção de produtos para casa, cozinha, pet e organização.</p>
       <form className="storeSearch" action="/ofertas" method="get">
-          {selected&&<input type="hidden" name="categoria" value={selected}/>}
+          {selected&&<input type="hidden" name="categoria" value={selected}/>}{marketplace&&<input type="hidden" name="marketplace" value={marketplace}/>}
           <input name="busca" defaultValue={busca} placeholder="Buscar um achado..." aria-label="Buscar ofertas"/>
           <button type="submit">Buscar</button>
-          {busca&&<a href={selected?`/ofertas?categoria=${encodeURIComponent(selected)}#ofertas`:"/ofertas#ofertas"}>Limpar</a>}
+          {busca&&<a href={menuUrl(selected,marketplace,"")}>Limpar</a>}
         </form>
         <div className="cats">
-        <a className={!selected?"activeCat":""} href={busca?`/ofertas?busca=${encodeURIComponent(busca)}#ofertas`:"/ofertas#ofertas"}>Todos</a>
-        {categories.map((c:any)=><a className={selected===c?"activeCat":""} key={c} href={`/ofertas?categoria=${encodeURIComponent(c)}${busca?`&busca=${encodeURIComponent(busca)}`:""}#ofertas`}>{c}</a>)}
+        <a className={!selected&&!marketplace?"activeCat":""} href={menuUrl()}>Todos</a>
+        {marketplaces.map(m=><a className={marketplace===m?"activeCat":""} aria-current={marketplace===m?"page":undefined} key={m} href={menuUrl("",m)}>{m}</a>)}
+        {categories.map((c:any)=><a className={selected===c&&!marketplace?"activeCat":""} key={c} href={menuUrl(c)}>{c}</a>)}
       </div>
     </section>
 
     <section id="ofertas">
       <div className="sectionTitle">
-        <div><span className="eyebrow">VITRINE</span><h2>{busca?`Resultados para “${busca}”`:selected?selected:"Achados de hoje"}</h2></div>
+        <div><span className="eyebrow">VITRINE</span><h2>{busca?`Resultados para “${busca}”`:marketplace?marketplace:selected?selected:"Achados de hoje"}</h2></div>
         <span>{visible.length} oferta{visible.length===1?"":"s"}</span>
       </div>
       <p className="affiliateNotice">Transparência: os botões “Ver oferta” podem usar links de afiliado. Podemos receber comissão pela compra, sem custo adicional para você.</p>
 
       {unavailable?<div className="empty"><b>Vitrine temporariamente indisponível.</b><br/>Tente novamente mais tarde.</div>:
-       visible.length===0?<div className="empty"><b>{busca?"Nenhum achado encontrado.":selected?"Nenhuma oferta nesta categoria agora.":"A primeira seleção está chegando."}</b><br/>{busca?"Tente outro termo ou limpe a busca.":selected?"Escolha outra categoria para continuar.":"As ofertas aprovadas aparecerão aqui automaticamente."}</div>:
+       visible.length===0?<div className="empty"><b>{busca?"Nenhum achado encontrado.":selected||marketplace?"Nenhuma oferta nesta seleção agora.":"A primeira seleção está chegando."}</b><br/>{busca?"Tente outro termo ou limpe a busca.":selected||marketplace?"Escolha outra opção do menu para continuar.":"As ofertas aprovadas aparecerão aqui automaticamente."}</div>:
        <div className="offerGrid">{visible.map((o:any)=>{
          const discount=o.original_price&&o.original_price>o.price?Math.round((1-o.price/o.original_price)*100):0;
          return <article className="offerCard" key={o.id}>

@@ -59,9 +59,9 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
   const pending=tasks.filter(t=>!["published","skipped"].includes(t.status)).length;
   return <section className="integrationBox publicationQueue">
     <div className="sectionTitle"><div><span className="eyebrow">DIVULGAÇÃO</span><h2>Fila operacional</h2></div><span>{pending} pendentes</span></div>
-    <p className="muted">Cada oferta entra uma vez por canal e por dia. Agendar organiza a fila; o envio automático só ocorre em canais conectados e habilitados para isso.</p>
+    <p className="muted">Cadastros manuais publicados e completos também entram na fila, incluindo Mercado Livre. Atualizar o cadastro não repete o envio. Agendar organiza a fila; o envio automático só ocorre em canais conectados e habilitados para isso.</p>
     <div className="queueComposer">
-      <label>Oferta<select value={offerId} onChange={e=>setOfferId(e.target.value)}>{offers.map(o=><option key={o.id} value={o.id}>{o.title}</option>)}</select></label>
+      <label>Oferta<select value={offerId} onChange={e=>setOfferId(e.target.value)}>{offers.map(o=><option key={o.id} value={o.id}>{o.marketplace} · {o.title}</option>)}</select></label>
       <label>Canal<select value={channel} onChange={e=>setChannel(e.target.value)}>{channels.map(([key,name])=><option key={key} value={key}>{name}</option>)}</select></label>
       <label>Agendar (opcional)<input type="datetime-local" value={when} onChange={e=>setWhen(e.target.value)}/></label>
       <button className="mini publish" disabled={busy||!offerId} onClick={()=>action({action:"enqueue",offerId:Number(offerId),channel,scheduledAt:when?new Date(when).toISOString():null})}>Adicionar à fila</button>

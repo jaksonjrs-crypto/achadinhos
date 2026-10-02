@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {db} from './db';
 import {productSafetyCheck} from './product-safety';
 import {sendTelegramOffer} from './telegram-publisher';
-import {brazilDate,ensurePublicationQueue} from './publication-queue';
+import {brazilDate,ensurePublicationQueue,queueManualOffers} from './publication-queue';
 
 export type AutopilotPolicy={enabled:boolean;min_score:number;max_per_day:number;start_hour:number;end_hour:number;cooldown_days:number;telegram_auto_publish:boolean};
 export async function getAutopilotPolicy():Promise<AutopilotPolicy>{
@@ -52,8 +52,8 @@ export async function runAutopilot(now=new Date()){
     catch{discovery={ok:false,reason:'Consulta Shopee falhou; verificar acesso à API'}}
   }
   // Keep searching within the allowed hours even after the publication budget
-  // is exhausted. Approved candidates wait for a later day; no extra sends.
-  if(!remaining)return {ok:true,ran:true,reason:'Limite diário atingido; busca realizada sem novas publicações',date,discovery,published:0,pending:0,failed:0,queued:0,queuedTasks:0,telegramSent:0,telegramFailed:0,remaining:0};
+  // is exhausted. Approved candidates wait for a later day; queued sends use
+  // their own daily channel budget below.
   const candidates=await sql`SELECT c.id,c.title,c.marketplace,c.external_id FROM product_candidates c
     WHERE c.status='approved' AND c.score>=${policy.min_score}
       AND c.image_url IS NOT NULL AND c.product_url IS NOT NULL AND c.price>0
@@ -64,8 +64,9 @@ export async function runAutopilot(now=new Date()){
     ORDER BY c.score DESC,c.created_at ASC LIMIT ${remaining}`;
   // Lazy import avoids a dependency cycle with the candidate publishing flow.
   const {autopilotCandidate}=await import('./autopilot');
-  const queue=candidates.length?await ensurePublicationQueue():null;
-  let published=0,pending=0,failed=0,queued=0,queuedTasks=0,telegramSent=0,telegramFailed=0;
+  const queue=await ensurePublicationQueue();
+  const manual=await queueManualOffers(undefined,date);
+  let published=0,pending=0,failed=0,queued=manual.queued,queuedTasks=manual.queuedTasks,telegramSent=0,telegramFailed=0;
   for(const c of candidates){
     const r=await autopilotCandidate(Number(c.id));
     if(!r.ok){failed++;continue}
@@ -80,33 +81,48 @@ export async function runAutopilot(now=new Date()){
     if(rows.length){
       queued++;
       queuedTasks+=rows.length;
-      const telegramTask=rows.find((row:any)=>row.channel==='telegram');
-      if(telegramTask && policy.telegram_auto_publish && process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID){
-        const taskId=Number(telegramTask.id);
-        const claimedTask=await queue!`UPDATE publication_tasks
-          SET status='publishing',attempts=attempts+1,updated_at=NOW()
-          WHERE id=${taskId} AND status='ready' RETURNING id`;
-        if(claimedTask.length){
-          let accepted=false,externalId='';
-          try{
-            const offers=await queue!`SELECT title,image_url,price,status FROM offers WHERE id=${r.offerId} LIMIT 1`;
-            const offer:any=offers[0];
-            if(!offer||offer.status!=='published'||!productSafetyCheck(String(offer.title||'')).allowed)throw new Error('Oferta indisponível ou bloqueada.');
-            externalId=await sendTelegramOffer(offer,r.offerId,'https://www.minhavitrinedeachados.com.br');
-            accepted=true;
-            await queue!`UPDATE publication_tasks SET status='published',external_id=${externalId||null},published_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=${taskId}`;
-            telegramSent++;
-          }catch(e:any){
-            if(accepted){
-              console.error('Telegram accepted but task update failed',{taskId,externalId,error:String(e?.message||e)});
-            }else{
-              const token=process.env.TELEGRAM_BOT_TOKEN?.trim();
-              const raw=String(e?.message||'Falha no Telegram');
-              const error=(token?raw.replaceAll(token,'[redacted]'):raw).slice(0,300);
-              await queue!`UPDATE publication_tasks SET status='failed',last_error=${error},updated_at=NOW() WHERE id=${taskId}`;
-              telegramFailed++;
-            }
-          }
+    }
+  }
+  // Drain ready tasks independently of candidate discovery, including manual
+  // Mercado Livre registrations. Never exceed the Telegram daily budget.
+  if(policy.telegram_auto_publish && process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID){
+    const sent=await queue`SELECT COUNT(*)::int AS total FROM publication_tasks
+      WHERE channel='telegram' AND (published_at>=${dayStart.toISOString()} AND published_at<${dayEnd.toISOString()}
+        OR status='publishing' AND updated_at>=${dayStart.toISOString()} AND updated_at<${dayEnd.toISOString()})`;
+    const budget=Math.max(0,policy.max_per_day-Number(sent[0]?.total||0));
+    const tasks=await queue`SELECT t.id,t.offer_id FROM publication_tasks t JOIN offers o ON o.id=t.offer_id
+      WHERE t.channel='telegram' AND t.status IN ('ready','scheduled')
+        AND (t.scheduled_at IS NULL OR t.scheduled_at<=${now.toISOString()}) AND t.cycle_date<=${date}::date
+        AND o.status='published' AND o.price>0 AND NULLIF(TRIM(o.image_url),'') IS NOT NULL
+        AND NULLIF(TRIM(o.affiliate_url),'') IS NOT NULL
+        AND NOT EXISTS(SELECT 1 FROM publication_tasks prev WHERE prev.offer_id=t.offer_id AND prev.channel='telegram'
+          AND (prev.status='publishing' OR prev.published_at>NOW()-(${policy.cooldown_days}::int*INTERVAL '1 day')))
+      ORDER BY t.created_at ASC,t.id ASC LIMIT ${budget}`;
+    for(const t of tasks){
+      const taskId=Number(t.id),offerId=Number(t.offer_id);
+      const claimedTask=await queue`UPDATE publication_tasks SET status='publishing',attempts=attempts+1,updated_at=NOW()
+        WHERE id=${taskId} AND status IN ('ready','scheduled') AND (scheduled_at IS NULL OR scheduled_at<=NOW())
+          AND NOT EXISTS(SELECT 1 FROM publication_tasks prev WHERE prev.offer_id=${offerId} AND prev.channel='telegram'
+            AND (prev.status='publishing' OR prev.published_at>NOW()-(${policy.cooldown_days}::int*INTERVAL '1 day'))) RETURNING id`;
+      if(!claimedTask.length)continue;
+      let accepted=false,externalId='';
+      try{
+        const offers=await queue`SELECT title,category,image_url,price,status FROM offers WHERE id=${offerId} LIMIT 1`;
+        const offer:any=offers[0];
+        if(!offer||offer.status!=='published'||!productSafetyCheck(String(offer.title||''),String(offer.category||'')).allowed)throw new Error('Oferta indisponível ou bloqueada.');
+        externalId=await sendTelegramOffer(offer,offerId,'https://www.minhavitrinedeachados.com.br');
+        accepted=true;
+        await queue`UPDATE publication_tasks SET status='published',external_id=${externalId||null},published_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=${taskId}`;
+        telegramSent++;
+      }catch(e:any){
+        if(accepted){
+          console.error('Telegram accepted but task update failed',{taskId,externalId,error:String(e?.message||e)});
+        }else{
+          const token=process.env.TELEGRAM_BOT_TOKEN?.trim();
+          const raw=String(e?.message||'Falha no Telegram');
+          const error=(token?raw.replaceAll(token,'[redacted]'):raw).slice(0,300);
+          await queue`UPDATE publication_tasks SET status='failed',last_error=${error},updated_at=NOW() WHERE id=${taskId}`;
+          telegramFailed++;
         }
       }
     }

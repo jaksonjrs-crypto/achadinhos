@@ -65,3 +65,13 @@ Fuso America/Sao_Paulo. Plano observado: 20 publicações/mês. Nenhuma assinatu
 
 Execução:
 https://github.com/jaksonjrs-crypto/achadinhos/actions/runs/36868628784
+
+
+## Cadastros manuais — 02/10/2026
+- Produtos manuais distintos do Mercado Livre podem compartilhar o link da loja de afiliado sem desaparecer da Vitrine ou Divulgação.
+- Menu público por marketplace: Shopee e Mercado Livre; ambos preservam os links de afiliado cadastrados.
+- Cadastros manuais publicados e completos (sem score de descoberta) entram na fila dos seis canais ao salvar, abrir Divulgação ou executar a rotina. Rascunhos e expiradas ficam de fora.
+- Uma oferta que já tem tarefas não é incluída de novo ao editar preço ou recarregar a fila. Novo ciclo continua disponível pela inclusão explícita por canal.
+- Telegram processa tarefas prontas e agendamentos vencidos mesmo sem candidato novo, respeitando habilitação, janela, limite diário por canal e intervalo de repetição. Oferta expirada é verificada novamente antes do envio.
+- Feeds Metricool já incluem os dois marketplaces, mantendo uma oferta semanal por rede. Entrar na fila local não confirma postagem pelo Metricool; o resultado precisa ser conferido no provedor.
+- WhatsApp e TikTok continuam com publicação assistida. Cadastro manual não transforma estes canais em envio automático.
