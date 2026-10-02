@@ -5,22 +5,34 @@ export function shopeeItemId(link:string):string|null {
   try {
     const url=new URL(link);
     if(url.hostname!=="shopee.com.br" && !url.hostname.endsWith(".shopee.com.br")) return null;
-    return url.pathname.match(/\/product\/\d+\/(\d+)(?:\/|$)/)?.[1]
+    return url.pathname.match(/\/(?:product|opaanlp)\/\d+\/(\d+)(?:\/|$)/)?.[1]
       || url.pathname.match(/-i\.\d+\.(\d+)(?:\/|$)/)?.[1] || null;
   } catch { return null; }
 }
 const n=(v:any)=>{if(v==null||v==="")return null;const x=Number(v);return Number.isFinite(x)?x:null};
 function originalPrice(p:any,price:number){const d=n(p.priceDiscountRate);return d!=null&&d>0&&d<100?+(price/(1-d/100)).toFixed(2):null}
 
-// Never match prices by title alone: similar names can belong to different sellers.
-export async function findShopeeProduct(itemId:string,title:string,fetchProducts=fetchShopeeProducts){
-  for(let page=1;page<=3;page++){
-    const data=await fetchProducts(page,50,title.slice(0,80));
-    const product=(data.nodes||[]).find((x:any)=>String(x.itemId)===itemId);
-    if(product)return product;
-    if(!data.pageInfo?.hasNextPage)break;
+// Resolve only public official Shopee hosts; never follow a redirect to another host.
+export async function resolveShopeeItemId(link:string,request:typeof fetch=fetch):Promise<string|null>{
+  let current=link;
+  for(let hop=0;hop<4;hop++){
+    let url:URL;try{url=new URL(current)}catch{return null}
+    if(url.protocol!=="https:"||url.port||url.username||url.password||
+      !["s.shopee.com.br","br.shp.ee","shopee.com.br","www.shopee.com.br"].includes(url.hostname))return null;
+    const id=shopeeItemId(current);if(id)return id;
+    const response=await request(url,{method:"HEAD",redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(5000)});
+    if(![301,302,303,307,308].includes(response.status))return null;
+    const location=response.headers.get("location");if(!location)return null;
+    current=new URL(location,url).toString();
   }
   return null;
+}
+
+// productOfferV2 supports itemId:Int64 in Shopee's official Explorer V2 schema.
+// Names may be customized in the storefront, so never use them to locate an existing item.
+export async function findShopeeProduct(itemId:string,_title:string,fetchProducts=fetchShopeeProducts){
+  const data=await fetchProducts(1,1,undefined,itemId);
+  return (data.nodes||[]).find((x:any)=>String(x.itemId)===itemId)||null;
 }
 
 export async function syncCatalog(limit=40,dependencies={db,fetchProducts:fetchShopeeProducts}){
@@ -36,8 +48,9 @@ export async function syncCatalog(limit=40,dependencies={db,fetchProducts:fetchS
   const details:{id:number;title:string;status:string;message:string}[]=[];
   for(const o of rows as any[]){
     const id=Number(o.id);
-    const itemId=String(o.external_id||o.product_external_id||o.candidate_external_id||shopeeItemId(o.affiliate_url)||"").trim();
+    let itemId=String(o.external_id||o.product_external_id||o.candidate_external_id||shopeeItemId(o.affiliate_url)||"").trim();
     try{
+      if(!itemId)itemId=await resolveShopeeItemId(String(o.affiliate_url||""))||"";
       if(!/^\d+$/.test(itemId)){
         await sql`UPDATE offers SET sync_status='unlinked',last_synced_at=NOW() WHERE id=${id}`;
         unlinked++;details.push({id,title:o.title,status:"unlinked",message:"Sem identificação do produto. Vincule o ID da Shopee em Corrigir oferta."});continue;
