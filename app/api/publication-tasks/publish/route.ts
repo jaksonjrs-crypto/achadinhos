@@ -3,6 +3,7 @@ import {ensurePublicationQueue} from "@/lib/publication-queue";
 import {pinterestFetch} from "@/lib/pinterest";
 import {productSafetyCheck} from "@/lib/product-safety";
 import {sendTelegramOffer} from "@/lib/telegram-publisher";
+import {publishInstagramImage} from "@/lib/instagram";
 export const dynamic="force-dynamic";
 
 export async function POST(req:NextRequest){
@@ -22,7 +23,12 @@ export async function POST(req:NextRequest){
       const offer:any=offers[0];
       if(!offer||offer.status!=='published'||!productSafetyCheck(String(offer.title||'')).allowed) throw new Error("Oferta indisponível ou bloqueada.");
       const link=`${new URL(req.url).origin}/o/${offerId}?c=${channel==='telegram'?'t':'p'}`;
-      if(channel==='telegram'){
+      if(channel==='instagram'){
+        if(!offer.image_url) throw new Error("Instagram exige uma imagem pública na oferta.");
+        const caption=`🔥 Achado de hoje!\n\n${String(offer.title).slice(0,140)}\n💰 ${offer.price ? `R$ ${Number(offer.price).toFixed(2).replace('.',',')}` : ''}\n\n🔗 Confira a promoção pelo link da bio.\n\n*Promoção sujeita a alteração a qualquer momento.\n\n#VitrineDosAchados #Achadinhos #Ofertas`;
+        const published=await publishInstagramImage({imageUrl:String(offer.image_url),caption});
+        externalId=published.mediaId;
+      }else if(channel==='telegram'){
         externalId=await sendTelegramOffer(offer,offerId,new URL(req.url).origin);
       }else if(channel==='pinterest'){
         const boardId=String(body.boardId||'').trim();
