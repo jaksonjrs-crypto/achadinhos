@@ -7,6 +7,7 @@ export default async function Prontidao(){
   const shopeeReady=Boolean(process.env.SHOPEE_APP_ID?.trim()&&process.env.SHOPEE_SECRET?.trim());
   const pinterestReady=Boolean(process.env.PINTEREST_APP_ID?.trim()&&process.env.PINTEREST_APP_SECRET?.trim()&&process.env.PINTEREST_REDIRECT_URI?.trim());
   const telegramReady=Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()&&process.env.TELEGRAM_CHAT_ID?.trim());
+  const instagramReady=Boolean(process.env.INSTAGRAM_ACCESS_TOKEN?.trim()&&process.env.INSTAGRAM_USER_ID?.trim());
   let offers:any[]=[]; let stats:any={summary:{clicks:0,published:0,clicked_offers:0}};
   let dbOk=true, analyticsOk=true;
   try{offers=await listAllOffers()}catch{dbOk=false}
@@ -50,7 +51,8 @@ export default async function Prontidao(){
         <p><b>Shopee Open API</b><span className={shopeeReady?"readyPill":"waitPill"}>{shopeeReady?"Credenciais presentes":"Credenciais pendentes"}</span></p>
         <p><b>Pinterest</b><span className={pinterestReady?"readyPill":"waitPill"}>{pinterestReady?"OAuth disponível":"Credenciais pendentes"}</span></p>
         <p><b>Telegram</b><span className={telegramReady?"readyPill":"waitPill"}>{telegramReady?"Bot configurado":"Bot pendente"}</span></p>
-        <p><b>Instagram, Facebook, WhatsApp e TikTok</b><span className="manualPill">Envio assistido</span></p>
+        <p><b>Instagram</b><span className={instagramReady?"readyPill":"manualPill"}>{instagramReady?"Publicação automática":"Envio assistido"}</span></p>
+        <p><b>Facebook, WhatsApp e TikTok</b><span className="manualPill">Envio assistido</span></p>
       </div>
     </section>
 
