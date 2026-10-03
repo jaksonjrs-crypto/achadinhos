@@ -38,6 +38,23 @@ export async function verifyInstagramConnection() {
   return { id: String(data.id), username: String(data.username || "") };
 }
 
+async function waitForMedia(creationId: string) {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const response = await graph(`/${encodeURIComponent(creationId)}?fields=status_code`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw apiError(data, response.status);
+    if (data.status_code === "FINISHED") return;
+    if (data.status_code === "ERROR" || data.status_code === "EXPIRED") {
+      throw new Error("Instagram: não foi possível processar a imagem. Confira a imagem pública da oferta.");
+    }
+    if (data.status_code !== "IN_PROGRESS") {
+      throw new Error("Instagram: estado de processamento inesperado. Confira a conta antes de tentar novamente.");
+    }
+    if (attempt < 9) await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  throw new Error("Instagram: a imagem ainda está em processamento. Nenhum pedido de publicação foi enviado.");
+}
+
 export async function publishInstagramImage(input: { imageUrl: string; caption: string }) {
   const { userId } = accessToken();
   await verifyInstagramConnection();
@@ -48,6 +65,8 @@ export async function publishInstagramImage(input: { imageUrl: string; caption: 
   });
   const created = await create.json().catch(() => ({}));
   if (!create.ok || !created.id) throw apiError(created, create.status);
+
+  await waitForMedia(String(created.id));
 
   const publish = await graph(`/${encodeURIComponent(userId)}/media_publish`, {
     method: "POST",
