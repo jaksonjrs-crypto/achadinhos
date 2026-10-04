@@ -50,7 +50,7 @@ export function syncFailureMessage(error:any,stage:string){
   return `${stage==="query"?"Consulta Shopee":"Identificação do link"}: ${message}. Preço mantido.`;
 }
 
-export async function syncCatalog(limit=40,dependencies={db,fetchProducts:fetchShopeeProducts}){
+export async function syncCatalog(limit=40,dependencies={db,fetchProducts:fetchShopeeProducts},offerId?:number){
   const sql=dependencies.db();
   const rows=await sql`SELECT o.id,o.title,o.external_id,o.product_id,o.price,o.affiliate_url,
       p.external_id AS product_external_id,
@@ -58,6 +58,7 @@ export async function syncCatalog(limit=40,dependencies={db,fetchProducts:fetchS
        AND c.product_url=o.affiliate_url AND c.external_id IS NOT NULL LIMIT 1) AS candidate_external_id
     FROM offers o LEFT JOIN products p ON p.id=o.product_id AND LOWER(TRIM(p.marketplace))='shopee'
     WHERE o.status IN ('published','draft') AND LOWER(TRIM(o.marketplace))='shopee'
+      AND (${offerId??null}::bigint IS NULL OR o.id=${offerId??null}::bigint)
     ORDER BY o.last_synced_at ASC NULLS FIRST,o.id ASC LIMIT ${Math.min(100,Math.max(1,limit))}`;
   let updated=0,unchanged=0,failed=0,unlinked=0;
   const details:{id:number;title:string;status:string;message:string}[]=[];

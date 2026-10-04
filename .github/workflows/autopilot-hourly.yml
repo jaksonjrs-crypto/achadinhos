@@ -4,6 +4,8 @@ on:
   schedule:
     # 08:05–20:05 in Brasília. Off the hour to reduce scheduler congestion.
     - cron: '5 11-23 * * *'
+    # Additional 20:30 Brasília slot (23:30 UTC).
+    - cron: '30 23 * * *'
   workflow_dispatch:
 
 permissions: {}
@@ -44,7 +46,7 @@ jobs:
               sys.exit('Resposta inconclusiva; conferir a fila antes de repetir o envio.')
           if result.get('ok') is not True:
               sys.exit('A rotina informou falha; conferir a fila e os logs do serviço.')
-          fields = ('ran', 'published', 'pending', 'failed', 'telegramSent', 'telegramFailed', 'remaining')
+          fields = ('ran', 'published', 'pending', 'failed', 'telegramSent', 'telegramFailed', 'instagramSent', 'instagramFailed', 'remaining')
           summary = {key: result[key] for key in fields if isinstance(result.get(key), (bool, int))}
           discovery = result.get('discovery')
           if isinstance(discovery, dict):
@@ -52,7 +54,7 @@ jobs:
               if isinstance(discovery.get('imported'), int):
                   summary['imported'] = discovery['imported']
           print(json.dumps(summary))
-          if result.get('failed', 0) or result.get('telegramFailed', 0):
+          if result.get('failed', 0) or result.get('telegramFailed', 0) or result.get('instagramFailed', 0):
               sys.exit('Execução terminou com falhas; conferir fila.')
           if isinstance(discovery, dict) and discovery.get('ok') is False:
               sys.exit('Consulta Shopee falhou; conferir acesso à API.')
