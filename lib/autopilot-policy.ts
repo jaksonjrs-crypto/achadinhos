@@ -1,11 +1,12 @@
 import {importShopeeCandidates} from './shopee-import';
 import {randomUUID} from 'node:crypto';
 import {db} from './db';
+import {PUBLICATION_TIMES} from './autopilot-schedule';
 import {productSafetyCheck} from './product-safety';
 import {sendTelegramOffer} from './telegram-publisher';
 import {brazilDate,ensurePublicationQueue,queueManualOffers} from './publication-queue';
 
-export type AutopilotPolicy={enabled:boolean;min_score:number;max_per_day:number;start_hour:number;end_hour:number;cooldown_days:number;telegram_auto_publish:boolean;instagram_auto_publish:boolean;facebook_auto_publish:boolean;scheduled_publish:boolean};
+export type AutopilotPolicy={enabled:boolean;min_score:number;max_per_day:number;start_hour:number;end_hour:number;cooldown_days:number;telegram_auto_publish:boolean;instagram_auto_publish:boolean;facebook_auto_publish:boolean;scheduled_publish:boolean;publication_times:string[]};
 export async function getAutopilotPolicy():Promise<AutopilotPolicy>{
   const sql=db();
   await sql`CREATE TABLE IF NOT EXISTS autopilot_policy (
@@ -26,9 +27,11 @@ export async function getAutopilotPolicy():Promise<AutopilotPolicy>{
   await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS instagram_auto_publish BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS facebook_auto_publish BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS scheduled_publish BOOLEAN NOT NULL DEFAULT FALSE`;
+  await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS publication_times TEXT[] NOT NULL DEFAULT ARRAY['09:00','13:00','16:00','19:00','20:30']::text[]`;
+  await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS last_discovery_at TIMESTAMPTZ`;
   await sql`INSERT INTO autopilot_policy(id) VALUES(1) ON CONFLICT DO NOTHING`;
-  const rows=await sql`SELECT enabled,min_score,max_per_day,start_hour,end_hour,cooldown_days,telegram_auto_publish,instagram_auto_publish,facebook_auto_publish,scheduled_publish FROM autopilot_policy WHERE id=1`;
-  return rows[0] as AutopilotPolicy;
+  const rows=await sql`SELECT enabled,min_score,max_per_day,start_hour,end_hour,cooldown_days,telegram_auto_publish,instagram_auto_publish,facebook_auto_publish,scheduled_publish,publication_times FROM autopilot_policy WHERE id=1`;
+  return {...rows[0],publication_times:rows[0]?.publication_times||[...PUBLICATION_TIMES]} as AutopilotPolicy;
 }
 export function brazilHour(now=new Date()){
   return Number(new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',hourCycle:'h23'}).format(now));
@@ -49,10 +52,14 @@ export async function runAutopilot(now=new Date()){
   const remaining=Math.max(0,policy.max_per_day-Number(count[0]?.total||0));
   // Automatic discovery is limited to the official Shopee connector. A failed
   // discovery must not prevent already approved offers from being processed.
-  let discovery:Awaited<ReturnType<typeof importShopeeCandidates>>|{ok:false;reason:string}={ok:false,reason:'Credenciais Shopee ausentes'};
+  let discovery:Awaited<ReturnType<typeof importShopeeCandidates>>|{ok:false;reason:string}|{ok:true;imported:number;skipped:true}={ok:false,reason:'Credenciais Shopee ausentes'};
   if(process.env.SHOPEE_APP_ID?.trim()&&process.env.SHOPEE_SECRET?.trim()){
-    try{discovery=await importShopeeCandidates({limit:10,minScore:policy.min_score,autoApprove:true})}
-    catch{discovery={ok:false,reason:'Consulta Shopee falhou; verificar acesso à API'}}
+    const discoveryClaim=await sql`UPDATE autopilot_policy SET last_discovery_at=${now.toISOString()}
+      WHERE id=1 AND (last_discovery_at IS NULL OR last_discovery_at<=${new Date(now.getTime()-3600000).toISOString()}) RETURNING id`;
+    if(discoveryClaim.length){
+      try{discovery=await importShopeeCandidates({limit:10,minScore:policy.min_score,autoApprove:true})}
+      catch{discovery={ok:false,reason:'Consulta Shopee falhou; verificar acesso à API'}}
+    }else discovery={ok:true,imported:0,skipped:true};
   }
   // Keep searching within the allowed hours even after the publication budget
   // is exhausted. Approved candidates wait for a later day; queued sends use

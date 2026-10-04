@@ -2,10 +2,8 @@ name: Autopiloto Shopee por hora
 
 on:
   schedule:
-    # 08:05–20:05 in Brasília. Off the hour to reduce scheduler congestion.
-    - cron: '5 11-23 * * *'
-    # Additional 20:30 Brasília slot (23:30 UTC).
-    - cron: '30 23 * * *'
+    # Poll editable Brasília slots every 15 minutes. Discovery stays hourly.
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
 
 permissions: {}
@@ -51,6 +49,7 @@ jobs:
           discovery = result.get('discovery')
           if isinstance(discovery, dict):
               summary['discovery_ok'] = discovery.get('ok') is True
+              summary['discovery_skipped'] = discovery.get('skipped') is True
               if isinstance(discovery.get('imported'), int):
                   summary['imported'] = discovery['imported']
           print(json.dumps(summary))

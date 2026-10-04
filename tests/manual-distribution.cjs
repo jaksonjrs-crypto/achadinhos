@@ -24,7 +24,7 @@ async function main(){
    if(q.includes("SET status='failed'"))failedUpdates++;
    return [];
   };
-  const auto=load('lib/autopilot-policy.ts',{'./db':{db:()=>runSql},'node:crypto':{randomUUID:()=> 'test-lease'},'./product-safety':safety,'./shopee-import':{importShopeeCandidates:()=>{throw Error('unexpected')}},'./telegram-publisher':{sendTelegramOffer:async()=>{sends++;return 'message-id'}},'./publication-queue':{brazilDate:queue.brazilDate,ensurePublicationQueue:async()=>runSql,queueManualOffers:async()=>({queued:1,queuedTasks:6})},'./autopilot':{autopilotCandidate:()=>{throw Error('no candidate expected')}}});
+  const auto=load('lib/autopilot-policy.ts',{'./db':{db:()=>runSql},'./autopilot-schedule':load('lib/autopilot-schedule.ts'),'node:crypto':{randomUUID:()=> 'test-lease'},'./product-safety':safety,'./shopee-import':{importShopeeCandidates:()=>{throw Error('unexpected')}},'./telegram-publisher':{sendTelegramOffer:async()=>{sends++;return 'message-id'}},'./publication-queue':{brazilDate:queue.brazilDate,ensurePublicationQueue:async()=>runSql,queueManualOffers:async()=>({queued:1,queuedTasks:6})},'./autopilot':{autopilotCandidate:()=>{throw Error('no candidate expected')}}});
   const r=await auto.runAutopilot(new Date('2026-10-02T15:00:00Z'));
   assert.equal(r.remaining,0);assert.equal(r.queued,1);
   assert.equal(sends,['normal','accepted-db-failure'].includes(mode)?1:0,mode);

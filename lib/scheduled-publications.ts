@@ -1,5 +1,5 @@
 import {ensurePublicationQueue,brazilDate} from './publication-queue';
-import {duePublicationSlot} from './autopilot-schedule';
+import {PUBLICATION_TIMES,duePublicationSlot} from './autopilot-schedule';
 import {productSafetyCheck} from './product-safety';
 import {syncCatalog} from './catalog-sync';
 import {publishInstagramImage} from './instagram';
@@ -8,7 +8,8 @@ import {facebookConfigured,publishFacebookPhoto} from './facebook';
 import type {AutopilotPolicy} from './autopilot-policy';
 
 export async function publishScheduledOffers(policy:AutopilotPolicy,now=new Date()) {
-  const slot=duePublicationSlot(now,policy.start_hour,policy.end_hour);
+  const times=policy.publication_times||[...PUBLICATION_TIMES];
+  const slot=duePublicationSlot(now,policy.start_hour,policy.end_hour,times);
   let instagramSent=0,instagramFailed=0,telegramSent=0,telegramFailed=0,facebookSent=0,facebookFailed=0;
   if(!slot)return {slot,instagramSent,instagramFailed,telegramSent,telegramFailed,facebookSent,facebookFailed};
   const sql=await ensurePublicationQueue(),date=brazilDate(now);
@@ -30,7 +31,7 @@ export async function publishScheduledOffers(policy:AutopilotPolicy,now=new Date
     const counts=await sql`SELECT COUNT(*)::int AS total FROM publication_tasks
       WHERE channel=${channel} AND (published_at>=${start.toISOString()} AND published_at<${end.toISOString()}
         OR status='publishing' AND updated_at>=${start.toISOString()} AND updated_at<${end.toISOString()})`;
-    if(Number(counts[0]?.total||0)>=policy.max_per_day)continue;
+    if(Number(counts[0]?.total||0)>=times.length)continue;
     const previous=await sql`SELECT slot FROM autopilot_publication_slots WHERE cycle_date=${date}::date AND slot=${slot} AND channel=${channel}`;
     if(previous.length)continue;
     // Shopee products can have their current price checked immediately before

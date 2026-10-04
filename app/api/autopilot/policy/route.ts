@@ -3,11 +3,12 @@ import {getAutopilotPolicy} from '@/lib/autopilot-policy';
 import {instagramConfigured} from '@/lib/instagram';
 import {facebookConfigured,verifyFacebookConnection} from '@/lib/facebook';
 import {db} from '@/lib/db';
+import {validatePublicationTimes} from '@/lib/autopilot-schedule';
 export const dynamic='force-dynamic';
 export async function GET(){try{return NextResponse.json({ok:true,policy:await getAutopilotPolicy(),cronConfigured:Boolean(process.env.CRON_SECRET),instagramConfigured:instagramConfigured(),facebookConfigured:facebookConfigured(),telegramConfigured:Boolean(process.env.TELEGRAM_BOT_TOKEN&&process.env.TELEGRAM_CHAT_ID)})}catch{return NextResponse.json({ok:false,error:'Não foi possível carregar as regras.'},{status:500})}}
 export async function POST(req:NextRequest){
   try{
-    await getAutopilotPolicy();
+    const current=await getAutopilotPolicy();
     const input=await req.json();
     const enabled=input.enabled===true;
     const telegramAuto=input.telegram_auto_publish===true;
@@ -15,17 +16,19 @@ export async function POST(req:NextRequest){
     const instagramAuto=input.instagram_auto_publish===true;
     const scheduled=input.scheduled_publish===true;
     if(instagramAuto&&!instagramConfigured())return NextResponse.json({ok:false,error:'Configure a conta do Instagram antes de ativar o envio automático.'},{status:400});
-    if(instagramAuto&&!scheduled)return NextResponse.json({ok:false,error:'Ative os cinco horários para enviar automaticamente ao Instagram.'},{status:400});
+    if(instagramAuto&&!scheduled)return NextResponse.json({ok:false,error:'Ative os horários programados para enviar automaticamente ao Instagram.'},{status:400});
     const facebookAuto=input.facebook_auto_publish===true;
-    if(facebookAuto&&!scheduled)return NextResponse.json({ok:false,error:'Ative os cinco horários para enviar ao Facebook.'},{status:400});
+    if(facebookAuto&&!scheduled)return NextResponse.json({ok:false,error:'Ative os horários programados para enviar ao Facebook.'},{status:400});
     if(facebookAuto){
       if(!facebookConfigured())return NextResponse.json({ok:false,error:'Configure o ID e o token da página do Facebook na Vercel.'},{status:400});
       try{await verifyFacebookConnection()}catch(e:any){return NextResponse.json({ok:false,error:e.message},{status:400})}
     }
     const min=Number(input.min_score),max=Number(input.max_per_day),start=Number(input.start_hour),end=Number(input.end_hour),cooldown=Number(input.cooldown_days);
     if(!Number.isInteger(min)||min<0||min>100||!Number.isInteger(max)||max<1||max>20||!Number.isInteger(start)||start<0||start>23||!Number.isInteger(end)||end<=start||end>24||!Number.isInteger(cooldown)||cooldown<1||cooldown>90)return NextResponse.json({ok:false,error:'Regras inválidas.'},{status:400});
+    let times:string[];
+    try{times=validatePublicationTimes(input.publication_times??current.publication_times,start,end)}catch(e:any){return NextResponse.json({ok:false,error:e.message},{status:400})}
     const sql=db();
-    await sql`UPDATE autopilot_policy SET enabled=${enabled},min_score=${min},max_per_day=${max},start_hour=${start},end_hour=${end},cooldown_days=${cooldown},telegram_auto_publish=${telegramAuto},instagram_auto_publish=${instagramAuto},facebook_auto_publish=${facebookAuto},scheduled_publish=${scheduled},updated_at=NOW() WHERE id=1`;
+    await sql`UPDATE autopilot_policy SET enabled=${enabled},min_score=${min},max_per_day=${max},start_hour=${start},end_hour=${end},cooldown_days=${cooldown},telegram_auto_publish=${telegramAuto},instagram_auto_publish=${instagramAuto},facebook_auto_publish=${facebookAuto},scheduled_publish=${scheduled},publication_times=${times},updated_at=NOW() WHERE id=1`;
     return NextResponse.json({ok:true,policy:await getAutopilotPolicy()});
   }catch{return NextResponse.json({ok:false,error:'Não foi possível salvar as regras.'},{status:500})}
 }
