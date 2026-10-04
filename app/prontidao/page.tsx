@@ -47,12 +47,12 @@ export default async function Prontidao(){
 
     <section className="integrationBox">
       <h2>Integrações externas</h2>
-      <p className="muted">A importação Shopee funciona quando as credenciais estão configuradas. Pinterest exige também a conta conectada; Telegram exige bot e canal acessíveis. Confira a resposta das APIs na Divulgação.</p>
+      <p className="muted">A presença de credenciais habilita a consulta Shopee; a resposta da API confirma o acesso. Pinterest exige também a conta conectada; Telegram exige bot e canal acessíveis. Confira a resposta das APIs na Divulgação.</p>
       <div className="integrationRows">
         <p><b>Shopee Open API</b><span className={shopeeReady?"readyPill":"waitPill"}>{shopeeReady?"Credenciais presentes":"Credenciais pendentes"}</span></p>
         <p><b>Pinterest</b><span className={pinterestReady?"readyPill":"waitPill"}>{pinterestReady?"OAuth disponível":"Credenciais pendentes"}</span></p>
         <p><b>Telegram</b><span className={telegramReady?"readyPill":"waitPill"}>{telegramReady?"Bot configurado":"Bot pendente"}</span></p>
-        <p><b>Instagram</b><span className={instagramReady?"readyPill":"manualPill"}>{instagramReady?"Publicação automática":"Envio assistido"}</span></p>
+        <p><b>Instagram</b><span className={instagramReady?"readyPill":"manualPill"}>{instagramReady?"Credenciais cadastradas":"Envio assistido"}</span></p>
         <p><b>Facebook</b><span className={facebookConfigured()?"readyPill":"manualPill"}>{facebookConfigured()?"Credenciais cadastradas":"Envio assistido"}</span></p>
         <p><b>WhatsApp e TikTok</b><span className="manualPill">Envio assistido</span></p>
       </div>

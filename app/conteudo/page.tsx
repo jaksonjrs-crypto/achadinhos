@@ -14,7 +14,7 @@ export default async function Conteudo({searchParams}:{searchParams:Promise<Reco
   const requestedChannel=allowedChannels.includes(params.canal as any)?params.canal as typeof allowedChannels[number]:"instagram";
 
   return <main className="panel">
-    <span className="badge">{APP_VERSION}</span><h1>Central de Conteúdo 3.0</h1>
+    <span className="badge">{APP_VERSION}</span><h1>Central de Conteúdo</h1>
     <p className="muted">Escolha uma oferta e prepare textos e links rastreados por canal sem precisar percorrer o catálogo inteiro.</p>
     <div className="noticeBox">
       <b>Estratégia de links:</b> use <code>/ofertas</code> na bio/perfil. Em posts de produto, use o link rastreado individual gerado abaixo; ele registra o canal e segue para o marketplace da oferta.

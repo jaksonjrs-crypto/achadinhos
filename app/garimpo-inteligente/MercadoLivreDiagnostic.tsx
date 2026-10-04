@@ -15,7 +15,7 @@ export default function MercadoLivreDiagnostic(){
   }
   return <details className="adminDisclosure mlDiagnostic"><summary>Diagnóstico Mercado Livre</summary>
     <div className="integrationBox">
-      <p className="muted">Diagnóstico técnico. O OAuth está ativo; catálogo respondeu, enquanto item e busca por vendedor de terceiros retornaram 403 nos testes desta aplicação. Estes testes não alteram tokens, produtos ou ofertas.</p>
+      <p className="muted">Os testes consultam a API com a conta autorizada e mostram a resposta atual. A descoberta automática de anúncios de terceiros está indisponível nesta aplicação. Nenhum teste importa produtos ou publica ofertas.</p>
       <div className="mlDiagGrid">
         <label><b>Aplicação e permissões</b><span>Confere status, scopes, grants e separação Mercado Livre/Mercado Pago sem exibir tokens ou segredos.</span><button className="mini publish" disabled={!!busy} onClick={()=>run("application","","q")}>{busy==="application"?"Verificando…":"Verificar aplicação"}</button></label>
         <label><b>Catálogo → Buy Box</b><span>Busca produtos de catálogo e verifica se existe publicação vencedora.</span><input value={catalog} onChange={e=>setCatalog(e.target.value)} placeholder="Ex.: air fryer"/><button className="mini publish" disabled={!!busy} onClick={()=>run("catalog",catalog,"q")}>{busy==="catalog"?"Testando…":"Testar catálogo"}</button></label>

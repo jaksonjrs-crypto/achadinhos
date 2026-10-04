@@ -20,7 +20,7 @@ export default async function Resultados(){
 
   return <main className="panel">
     <span className="badge">{APP_VERSION}</span>
-    <h1>Resultados 3.0</h1>
+    <h1>Resultados</h1>
     <p className="muted">Veja quais ofertas e canais realmente estão atraindo cliques. A contagem de cliques é feita pela própria Vitrine e não depende da API da Shopee; vendas e comissões dependem dos dados disponibilizados pelos marketplaces.</p>
 
     <section className="metricGrid analyticsMetrics">

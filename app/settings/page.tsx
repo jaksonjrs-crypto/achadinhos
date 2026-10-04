@@ -8,8 +8,8 @@ export default function SettingsPage() {
   const [pinterest,setPinterest]=useState<any>(null);
   useEffect(()=>{
     fetch("/api/connection").then(r=>r.json()).then(setMl).catch(()=>setMl({connected:false}));
-    fetch("/api/integrations/status").then(r=>r.json()).then(setIntegrations).catch(()=>setIntegrations(null));
-    fetch("/api/pinterest/status").then(r=>r.json()).then(setPinterest).catch(()=>setPinterest({connected:false}));
+    fetch("/api/integrations/status",{cache:"no-store"}).then(r=>r.json()).then(setIntegrations).catch(()=>setIntegrations(null));
+    fetch("/api/pinterest/status",{cache:"no-store"}).then(r=>r.json()).then(setPinterest).catch(()=>setPinterest({connected:false}));
   },[]);
 
   const pill=(ok:boolean)=><span className={ok?"readyPill":"waitPill"}>{ok?"Configurado":"Pendente"}</span>;
@@ -37,7 +37,7 @@ export default function SettingsPage() {
         <p><b>Conector ao vivo</b>{pill(Boolean(integrations?.shopee?.liveConnector))}</p>
       </div>
       <p className="muted">{integrations?.shopee?.note||"Verificando configuração do servidor..."}</p>
-      <div className="noticeBox"><b>Segurança:</b> quando a Shopee liberar as credenciais, cadastre-as somente nas variáveis de ambiente da Vercel. Não cole segredos em formulários do site nem nesta conversa.</div>
+      <div className="noticeBox"><b>Segurança:</b> as credenciais da Shopee ficam somente nas variáveis de ambiente da Vercel. Não cole segredos em formulários do site nem nesta conversa.</div>
     </section>
 
     <section className="integrationBox">
@@ -63,12 +63,16 @@ export default function SettingsPage() {
     </section>
 
     <section className="integrationBox">
-      <h2>Próximas ativações</h2>
+      <h2>Publicação por canal</h2>
       <div className="integrationRows">
         <p><b>Importação Shopee → Garimpo</b>{pill(Boolean(integrations?.shopee?.liveConnector))}</p>
         <p><b>Filtro seguro de catálogo</b><span className="readyPill">Pronto</span></p>
-        <p><b>Publicação em redes sociais</b><span className="manualPill">Manual por enquanto</span></p>
+        {([['telegram','Telegram'],['instagram','Instagram'],['facebook','Facebook']] as const).map(([key,label])=><p key={key}><b>{label}</b>{integrations?pill(Boolean(integrations[key]?.configured)):<span className="manualPill">Verificando…</span>}</p>)}
+        <p><b>Pinterest no Autopiloto</b><span className="manualPill">Ainda não implementado</span></p>
+        <p><b>TikTok e WhatsApp</b><span className="manualPill">Envio assistido</span></p>
       </div>
+      <p className="muted">Telegram, Instagram e Facebook podem enviar nos horários do Autopiloto quando habilitados. Configuração não confirma publicação. Pinterest usa a API pela fila após conectar a conta e escolher uma pasta; TikTok permanece manual.</p>
+      <a className="mini publish" href="/automacao">Ver regras do Autopiloto</a> <a className="mini secondaryMini" href="/divulgacao">Verificar APIs e publicações</a>
     </section>
   </main>;
 }

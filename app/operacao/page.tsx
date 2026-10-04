@@ -1,3 +1,4 @@
+import { integrationStatus } from "@/lib/integration-status";
 import { APP_VERSION } from "@/lib/version";
 import { listAllOffers } from "@/lib/offers";
 import { getDashboardStats } from "@/lib/analytics";
@@ -22,7 +23,8 @@ export default async function Operacao(){
   const today=new Date(); today.setHours(0,0,0,0);
   const publishedToday=published.filter((o:any)=>new Date(o.updated_at||o.created_at).getTime()>=today.getTime()).length;
   const recentOffers=[...published].sort((a:any,b:any)=>new Date(b.updated_at||b.created_at).getTime()-new Date(a.updated_at||a.created_at).getTime()).slice(0,4);
-  const externalPending=2; // Shopee live + publicação social automática continuam aguardando integração oficial.
+  const integrations=integrationStatus();
+  const configuredChannels=[integrations.telegram,integrations.instagram,integrations.facebook].filter(channel=>channel.configured).length;
   const next=exceptions?{title:"Resolver pendências",text:`${exceptions} item(ns) precisam da sua intervenção. O restante do fluxo segue no Autopiloto.`,href:candidatePending?"/garimpo-inteligente":"/central",action:"Ver pendências"}:
     ready.length?{title:"Publicar ofertas prontas",text:`${ready.length} rascunho(s) passaram pelo controle de qualidade.`,href:"/central",action:"Abrir Central"}:
     published.length?{title:"Divulgar ofertas",text:`${published.length} oferta(s) estão publicadas e podem entrar na rodada de divulgação.`,href:"/automacao",action:"Abrir Automação"}:
@@ -30,15 +32,15 @@ export default async function Operacao(){
 
   return <main className="panel">
     <span className="badge">{APP_VERSION}</span>
-    <h1>Painel Operacional 2.0</h1>
-    <div className="releasePill">v1.5 • operação diária</div>
+    <h1>Painel Operacional</h1>
+    <div className="releasePill">Operação diária</div>
     <a className="readinessLink" href="/prontidao">Ver checklist de prontidão →</a>
     <p className="muted">Autopiloto ativo: o sistema prepara e publica ofertas completas; você atua apenas nas exceções.</p>
     <section className={`autopilotStatus ${exceptions?"hasExceptions":"allClear"}`}><div><span>AUTOPILOTO</span><h2>{exceptions?`${exceptions} pendência${exceptions===1?"":"s"}`:"Tudo em ordem"}</h2><p>{exceptions?"Há itens que precisam de uma decisão ou dado seu.":"Nenhuma intervenção necessária agora. Ofertas completas seguem automaticamente para Vitrine, Conteúdo, Criativos e Divulgação."}</p></div><a className="mini publish" href={exceptions?(candidatePending?"/garimpo-inteligente":"/central"):"/resultados"}>{exceptions?"Abrir pendências":"Acompanhar resultados"}</a></section>
 
     <section className="mobileSupervisor">
       <div className="supervisorHead"><div><span>RESUMO DO AUTOPILOTO</span><h2>{exceptions?"Sua atenção é necessária":"Você não precisa fazer nada agora"}</h2></div><b className={exceptions?"supervisorWarn":"supervisorOk"}>{exceptions?`${exceptions} pendência${exceptions===1?"":"s"}`:"Tudo certo"}</b></div>
-      <div className="supervisorStats"><div><b>{publishedToday}</b><span>publicadas hoje</span></div><div><b>{published.length}</b><span>na Vitrine</span></div><div><b>{last7}</b><span>cliques em 7 dias</span></div><div><b>{externalPending}</b><span>integrações pendentes</span></div></div>
+      <div className="supervisorStats"><div><b>{publishedToday}</b><span>publicadas hoje</span></div><div><b>{published.length}</b><span>na Vitrine</span></div><div><b>{last7}</b><span>cliques em 7 dias</span></div><div><b>{configuredChannels}</b><span>canais do Autopiloto configurados</span></div></div>
       <div className="activityFeed"><strong>Atividade recente</strong>{recentOffers.length?recentOffers.map((o:any)=><p key={o.id}><span>✓</span><b>{o.title}</b><small>publicada e pronta para divulgação</small></p>):<p><small>Nenhuma publicação recente.</small></p>}</div>
     </section>
 
@@ -91,9 +93,13 @@ export default async function Operacao(){
       <div className="integrationRows">
         <p><b>Banco + Vitrine + rastreamento</b><span className="readyPill">Operacionais</span></p>
         <p><b>Conteúdo + Criativos + Agenda</b><span className="readyPill">Operacionais</span></p>
-        <p><b>Shopee Open API</b><span className="waitPill">Aguardando acesso</span></p>
-        <p><b>Publicação externa automática</b><span className="manualPill">Ainda manual</span></p>
+        <p><b>Shopee Open API</b><span className={integrations.shopee.configured?"readyPill":"waitPill"}>{integrations.shopee.configured?"Credenciais configuradas":"Credenciais pendentes"}</span></p>
+        {([['telegram','Telegram'],['instagram','Instagram'],['facebook','Facebook']] as const).map(([key,label])=><p key={key}><b>{label}</b><span className={integrations[key].configured?"readyPill":"waitPill"}>{integrations[key].configured?"Credenciais configuradas":"Credenciais pendentes"}</span></p>)}
+        <p><b>Mercado Livre</b><span className="manualPill">Importação por lista</span></p>
+        <p><b>Pinterest</b><span className={integrations.pinterest.configured?"manualPill":"waitPill"}>{integrations.pinterest.configured?"Verificar OAuth na Divulgação":"Credenciais pendentes"}</span></p>
+        <p><b>TikTok e WhatsApp</b><span className="manualPill">Envio assistido</span></p>
       </div>
+      <p className="muted">A configuração não confirma um envio. Confira as APIs e os registros de publicação na Divulgação; habilite os canais e horários no Autopiloto.</p>
     </section>
   </main>
 }

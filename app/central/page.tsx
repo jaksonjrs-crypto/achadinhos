@@ -27,7 +27,7 @@ export default async function Central({searchParams}:{searchParams:Promise<Recor
   const marketplaces=Array.from(new Set(all.map(o=>String(o.marketplace)).filter(Boolean))).sort();
 
   return <main className="panel">
-    <span className="badge">{APP_VERSION}</span><h1>Central de Ofertas 2.0</h1>
+    <span className="badge">{APP_VERSION}</span><h1>Central de Ofertas</h1>
     <p className="muted">Cadastre, revise, encontre e publique ofertas sem perder o controle do catálogo.</p>
 
     <section className="centralSummary">

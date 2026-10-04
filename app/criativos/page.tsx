@@ -12,7 +12,7 @@ export default async function Criativos({searchParams}:{searchParams:Promise<Rec
   const selected=offers.find(o=>Number(o.id)===requested)||offers[0];
 
   return <main className="panel">
-    <span className="badge">{APP_VERSION}</span><h1>Gerador de Criativos 3.0</h1>
+    <span className="badge">{APP_VERSION}</span><h1>Gerador de Criativos</h1>
     <p className="muted">Escolha uma oferta e crie uma peça sem aparecer, usando a identidade da Vitrine dos Achados.</p>
     {offers.length===0?<div className="empty">Publique uma oferta para gerar um criativo.</div>:<>
       <form className="offerSelector" method="get">
