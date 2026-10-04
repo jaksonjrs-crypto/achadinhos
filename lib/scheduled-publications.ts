@@ -4,12 +4,13 @@ import {productSafetyCheck} from './product-safety';
 import {syncCatalog} from './catalog-sync';
 import {publishInstagramImage} from './instagram';
 import {sendTelegramOffer} from './telegram-publisher';
+import {facebookConfigured,publishFacebookPhoto} from './facebook';
 import type {AutopilotPolicy} from './autopilot-policy';
 
 export async function publishScheduledOffers(policy:AutopilotPolicy,now=new Date()) {
   const slot=duePublicationSlot(now,policy.start_hour,policy.end_hour);
-  let instagramSent=0,instagramFailed=0,telegramSent=0,telegramFailed=0;
-  if(!slot)return {slot,instagramSent,instagramFailed,telegramSent,telegramFailed};
+  let instagramSent=0,instagramFailed=0,telegramSent=0,telegramFailed=0,facebookSent=0,facebookFailed=0;
+  if(!slot)return {slot,instagramSent,instagramFailed,telegramSent,telegramFailed,facebookSent,facebookFailed};
   const sql=await ensurePublicationQueue(),date=brazilDate(now);
   await sql`CREATE TABLE IF NOT EXISTS autopilot_publication_slots (
     cycle_date DATE NOT NULL, slot TEXT NOT NULL, channel TEXT NOT NULL,
@@ -18,13 +19,13 @@ export async function publishScheduledOffers(policy:AutopilotPolicy,now=new Date
     PRIMARY KEY(cycle_date,slot,channel)
   )`;
   const start=new Date(`${date}T00:00:00-03:00`),end=new Date(start.getTime()+86400000);
-  for(const channel of ['telegram','instagram'] as const){
-    const enabled=channel==='telegram'?policy.telegram_auto_publish:policy.instagram_auto_publish;
+  for(const channel of ['telegram','instagram','facebook'] as const){
+    const enabled=channel==='telegram'?policy.telegram_auto_publish:channel==='facebook'?policy.facebook_auto_publish:policy.instagram_auto_publish;
     if(!enabled)continue;
     const configured=channel==='telegram'
       ? Boolean(process.env.TELEGRAM_BOT_TOKEN&&process.env.TELEGRAM_CHAT_ID)
-      : Boolean(process.env.INSTAGRAM_ACCESS_TOKEN&&process.env.INSTAGRAM_USER_ID);
-    if(!configured){channel==='telegram'?telegramFailed++:instagramFailed++;continue;}
+      : channel==='facebook'?facebookConfigured():Boolean(process.env.INSTAGRAM_ACCESS_TOKEN&&process.env.INSTAGRAM_USER_ID);
+    if(!configured){channel==='telegram'?telegramFailed++:channel==='facebook'?facebookFailed++:instagramFailed++;continue;}
     // Published/manual sends and uncertain in-flight sends consume the budget.
     const counts=await sql`SELECT COUNT(*)::int AS total FROM publication_tasks
       WHERE channel=${channel} AND (published_at>=${start.toISOString()} AND published_at<${end.toISOString()}
@@ -63,19 +64,23 @@ export async function publishScheduledOffers(policy:AutopilotPolicy,now=new Date
       if(!offer||offer.status!=='published'||Number(offer.price)<=0||!productSafetyCheck(String(offer.title||''),String(offer.category||'')).allowed)throw new Error('Oferta indisponível ou bloqueada.');
       let externalId:string;
       if(channel==='telegram')externalId=await sendTelegramOffer(offer,offerId,'https://www.minhavitrinedeachados.com.br');
-      else{
+      else if(channel==='facebook'){
+        const price=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(offer.price));
+        const message=`🔥 Achado de hoje!\n\n${String(offer.title).slice(0,140)}\n💰 ${price}\n\n🔗 Confira a promoção:\nhttps://www.minhavitrinedeachados.com.br/go/${offerId}?channel=facebook\n\nSiga a Vitrine para acompanhar novos achados.\nPromoção sujeita a alteração a qualquer momento. Podemos receber comissão pelas compras.\n\n#VitrineDosAchados #Achadinhos #Ofertas`;
+        externalId=(await publishFacebookPhoto({imageUrl:String(offer.image_url),message})).postId;
+      }else{
         const price=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(offer.price));
         const caption=`🔥 Achado de hoje!\n\n${String(offer.title).slice(0,140)}\n💰 ${price}\n\n🔗 Confira a promoção pelo link da bio.\nSiga a Vitrine para acompanhar novos achados.\n\nPromoção sujeita a alteração a qualquer momento. Podemos receber comissão pelas compras.\n\n#VitrineDosAchados #Achadinhos #Ofertas`;
         externalId=(await publishInstagramImage({imageUrl:String(offer.image_url),caption})).mediaId;
       }
       accepted=true;
-      channel==='telegram'?telegramSent++:instagramSent++;
+      channel==='telegram'?telegramSent++:channel==='facebook'?facebookSent++:instagramSent++;
       await sql`UPDATE publication_tasks SET status='published',external_id=${externalId},published_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=${taskId}`;
     }catch{
-      channel==='telegram'?telegramFailed++:instagramFailed++;
+      channel==='telegram'?telegramFailed++:channel==='facebook'?facebookFailed++:instagramFailed++;
       if(!accepted)await sql`UPDATE publication_tasks SET status='failed',last_error='Envio automático não confirmado. Confira preço e canal antes de repetir.',updated_at=NOW() WHERE id=${taskId}`;
       // An accepted send stays 'publishing' if recording failed, never retryable.
     }
   }
-  return {slot,instagramSent,instagramFailed,telegramSent,telegramFailed};
+  return {slot,instagramSent,instagramFailed,telegramSent,telegramFailed,facebookSent,facebookFailed};
 }

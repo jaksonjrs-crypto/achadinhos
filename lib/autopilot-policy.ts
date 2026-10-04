@@ -5,7 +5,7 @@ import {productSafetyCheck} from './product-safety';
 import {sendTelegramOffer} from './telegram-publisher';
 import {brazilDate,ensurePublicationQueue,queueManualOffers} from './publication-queue';
 
-export type AutopilotPolicy={enabled:boolean;min_score:number;max_per_day:number;start_hour:number;end_hour:number;cooldown_days:number;telegram_auto_publish:boolean;instagram_auto_publish:boolean;scheduled_publish:boolean};
+export type AutopilotPolicy={enabled:boolean;min_score:number;max_per_day:number;start_hour:number;end_hour:number;cooldown_days:number;telegram_auto_publish:boolean;instagram_auto_publish:boolean;facebook_auto_publish:boolean;scheduled_publish:boolean};
 export async function getAutopilotPolicy():Promise<AutopilotPolicy>{
   const sql=db();
   await sql`CREATE TABLE IF NOT EXISTS autopilot_policy (
@@ -24,9 +24,10 @@ export async function getAutopilotPolicy():Promise<AutopilotPolicy>{
   await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ`;
   await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS telegram_auto_publish BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS instagram_auto_publish BOOLEAN NOT NULL DEFAULT FALSE`;
+  await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS facebook_auto_publish BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`ALTER TABLE autopilot_policy ADD COLUMN IF NOT EXISTS scheduled_publish BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`INSERT INTO autopilot_policy(id) VALUES(1) ON CONFLICT DO NOTHING`;
-  const rows=await sql`SELECT enabled,min_score,max_per_day,start_hour,end_hour,cooldown_days,telegram_auto_publish,instagram_auto_publish,scheduled_publish FROM autopilot_policy WHERE id=1`;
+  const rows=await sql`SELECT enabled,min_score,max_per_day,start_hour,end_hour,cooldown_days,telegram_auto_publish,instagram_auto_publish,facebook_auto_publish,scheduled_publish FROM autopilot_policy WHERE id=1`;
   return rows[0] as AutopilotPolicy;
 }
 export function brazilHour(now=new Date()){
@@ -129,13 +130,13 @@ export async function runAutopilot(now=new Date()){
       }
     }
   }
-  let scheduled={slot:null as string|null,instagramSent:0,instagramFailed:0,telegramSent:0,telegramFailed:0};
+  let scheduled={slot:null as string|null,instagramSent:0,instagramFailed:0,facebookSent:0,facebookFailed:0,telegramSent:0,telegramFailed:0};
   if(policy.scheduled_publish){
     const {publishScheduledOffers}=await import('./scheduled-publications');
     scheduled=await publishScheduledOffers(policy,now);
     telegramSent+=scheduled.telegramSent;telegramFailed+=scheduled.telegramFailed;
   }
-  return {ok:true,ran:true,date,slot:scheduled.slot,instagramSent:scheduled.instagramSent,instagramFailed:scheduled.instagramFailed,discovery,considered:candidates.length,published,pending,failed,queued,queuedTasks,telegramSent,telegramFailed,remaining:Math.max(0,remaining-published)};
+  return {ok:true,ran:true,date,slot:scheduled.slot,instagramSent:scheduled.instagramSent,instagramFailed:scheduled.instagramFailed,facebookSent:scheduled.facebookSent,facebookFailed:scheduled.facebookFailed,discovery,considered:candidates.length,published,pending,failed,queued,queuedTasks,telegramSent,telegramFailed,remaining:Math.max(0,remaining-published)};
   }finally{
     await sql`UPDATE autopilot_policy SET run_token=NULL,lease_until=NULL WHERE id=1 AND run_token=${token}`;
   }

@@ -10,7 +10,8 @@
     "test:ml-list-import": "node tests/ml-list-import.cjs",
     "test:manual-distribution": "node tests/manual-distribution.cjs",
     "test:autopilot-schedule": "node tests/autopilot-schedule.cjs",
-    "test:catalog-price": "node tests/catalog-price.cjs"
+    "test:catalog-price": "node tests/catalog-price.cjs",
+    "test:facebook": "node tests/facebook-publisher.cjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

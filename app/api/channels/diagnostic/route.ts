@@ -2,10 +2,11 @@ import {instagramConfigured,verifyInstagramConnection} from "@/lib/instagram";
 import {NextResponse} from "next/server";
 import {pinterestFetch} from "@/lib/pinterest";
 import {connectionStatus} from "@/lib/pinterest";
+import {facebookConfigured,verifyFacebookConnection} from '@/lib/facebook';
 export const dynamic="force-dynamic";
 
 export async function GET(){
-  const result:any={instagram:{configured:instagramConfigured(),ok:false},pinterest:{configured:false,ok:false},telegram:{configured:false,ok:false}};
+  const result:any={facebook:{configured:facebookConfigured(),ok:false},instagram:{configured:instagramConfigured(),ok:false},pinterest:{configured:false,ok:false},telegram:{configured:false,ok:false}};
   const pConfigured=Boolean(process.env.PINTEREST_APP_ID&&process.env.PINTEREST_APP_SECRET&&process.env.PINTEREST_REDIRECT_URI);
   result.pinterest.configured=pConfigured;
   if(pConfigured){
@@ -48,6 +49,10 @@ export async function GET(){
   if(result.instagram.configured){
     try{const account=await verifyInstagramConnection();result.instagram={configured:true,ok:true,username:account.username,detail:"Conta acessível. A permissão de publicação será confirmada no envio."};}
     catch(e:any){result.instagram={configured:true,ok:false,error:String(e?.message||"Falha ao consultar o Instagram.").slice(0,300)};}
+  }
+  if(result.facebook.configured){
+    try{const page=await verifyFacebookConnection();result.facebook={configured:true,ok:true,name:page.name,detail:'Página acessível. A publicação será confirmada no envio.'};}
+    catch(e:any){result.facebook={configured:true,ok:false,error:e.message};}
   }
   return NextResponse.json(result,{headers:{'Cache-Control':'no-store'}});
 }

@@ -4,7 +4,7 @@ const schedule=load('lib/autopilot-schedule.ts');
 const at=time=>new Date(`2026-10-04T${time}:00-03:00`);
 for(const [time,expected] of [['08:59',null],['09:00','09:00'],['10:29','09:00'],['10:30',null],['13:05','13:00'],['16:05','16:00'],['19:05','19:00'],['20:29','19:00'],['20:30','20:30'],['20:59','20:30'],['21:00',null],['00:01',null]])assert.equal(schedule.duePublicationSlot(at(time),8,21),expected,time);
 assert.equal(schedule.duePublicationSlot(at('09:05'),10,21),null);
-async function check(mode){
+async function check(mode,channel="instagram"){
  let reserved=false,taskStatus='ready',sends=0,refreshes=0,failed=0;
  const sql=async(strings,...values)=>{const q=strings.join('?');
   if(q.includes('COUNT(*)'))return [{total:mode==='budget'?5:0}];
@@ -17,14 +17,14 @@ async function check(mode){
   if(q.includes("SET status='failed'")){failed++;taskStatus='failed';}
   return [];
  };
- const pub=load('lib/scheduled-publications.ts',{'./publication-queue':{ensurePublicationQueue:async()=>sql,brazilDate:()=> '2026-10-04'},'./autopilot-schedule':schedule,'./product-safety':{productSafetyCheck:()=>({allowed:true})},'./catalog-sync':{syncCatalog:async(_n,_deps,id)=>{assert.equal(id,10);refreshes++;return {checked:1,failed:mode==='price'?1:0,unlinked:0};}},'./instagram':{publishInstagramImage:async()=>{sends++;if(mode==='uncertain')throw Error('timeout');return {mediaId:'123'};}},'./telegram-publisher':{sendTelegramOffer:async()=>{throw Error('Telegram disabled');}}},{INSTAGRAM_ACCESS_TOKEN:'test',INSTAGRAM_USER_ID:'test'});
- const policy={start_hour:8,end_hour:21,max_per_day:5,cooldown_days:7,instagram_auto_publish:true,telegram_auto_publish:false};
+ const pub=load('lib/scheduled-publications.ts',{'./publication-queue':{ensurePublicationQueue:async()=>sql,brazilDate:()=> '2026-10-04'},'./autopilot-schedule':schedule,'./product-safety':{productSafetyCheck:()=>({allowed:true})},'./catalog-sync':{syncCatalog:async(_n,_deps,id)=>{assert.equal(id,10);refreshes++;return {checked:1,failed:mode==='price'?1:0,unlinked:0};}},'./facebook':{facebookConfigured:()=>true,publishFacebookPhoto:async input=>{assert.match(input.message,/channel=facebook/);sends++;if(mode==='uncertain')throw Error('timeout');return {postId:'page_post'};}},'./instagram':{publishInstagramImage:async()=>{sends++;if(mode==='uncertain')throw Error('timeout');return {mediaId:'123'};}},'./telegram-publisher':{sendTelegramOffer:async()=>{throw Error('Telegram disabled');}}},{INSTAGRAM_ACCESS_TOKEN:'test',INSTAGRAM_USER_ID:'test'});
+ const policy={start_hour:8,end_hour:21,max_per_day:5,cooldown_days:7,instagram_auto_publish:channel==="instagram",facebook_auto_publish:channel==="facebook",telegram_auto_publish:false};
  const first=await pub.publishScheduledOffers(policy,at('13:05'));
  await pub.publishScheduledOffers(policy,at('13:20'));
- if(['normal','recording'].includes(mode)){assert.equal(sends,1);assert.equal(first.instagramSent,1);assert.equal(failed,0);}
+ if(['normal','recording'].includes(mode)){assert.equal(sends,1);assert.equal(first[channel+"Sent"],1);assert.equal(failed,0);}
  if(['price','expired'].includes(mode)){assert.equal(sends,0);assert.equal(failed,1);}
- if(mode==='uncertain'){assert.equal(sends,1);assert.equal(failed,1);assert.equal(first.instagramFailed,1);}
+ if(mode==='uncertain'){assert.equal(sends,1);assert.equal(failed,1);assert.equal(first[channel+"Failed"],1);}
  if(['budget','empty'].includes(mode)){assert.equal(sends,0);assert.equal(refreshes,0);}
  if(mode==='recording')assert.equal(taskStatus,'publishing');
 }
-(async()=>{for(const m of ['normal','budget','empty','price','expired','uncertain','recording'])await check(m);console.log('PASS: Brasília slots, missed slots, daily budget, empty queue, current price, expired offer, duplicate invocation, uncertain send, accepted send recording failure');})().catch(e=>{console.error(e);process.exitCode=1;});
+(async()=>{for(const m of ['normal','budget','empty','price','expired','uncertain','recording']){await check(m);await check(m,'facebook');}console.log('PASS: Brasília slots, missed slots, daily budget, empty queue, current price, expired offer, duplicate invocation, uncertain send, accepted send recording failure');})().catch(e=>{console.error(e);process.exitCode=1;});

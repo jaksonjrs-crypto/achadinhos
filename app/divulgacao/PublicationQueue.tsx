@@ -49,7 +49,8 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
       const pinterest=d.pinterest?.ok?'API respondeu':d.pinterest?.configured?'Conexão pendente ou falhou':'não configurado';
       const telegram=d.telegram?.ok?`bot autorizado a publicar em ${d.telegram.chat||'canal configurado'}`:d.telegram?.error||'não configurado';
       const instagram=d.instagram?.ok?`conta conectada${d.instagram.username ? ` (@${d.instagram.username})` : ""}; publicação ainda precisa ser confirmada`:d.instagram?.error||"não configurado";
-      setDiagnostic(`Instagram: ${instagram} · Pinterest: ${pinterest} · Telegram: ${telegram}`);
+      const facebook=d.facebook?.ok?`página conectada (${d.facebook.name||"Facebook"})`:d.facebook?.error||"não configurado";
+      setDiagnostic(`Facebook: ${facebook} · Instagram: ${instagram} · Pinterest: ${pinterest} · Telegram: ${telegram}`);
     }catch{setDiagnostic('Não foi possível verificar os canais.')}
   }
   async function publish(t:Task){
@@ -68,7 +69,7 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
       <button className="mini publish" disabled={busy||!offerId} onClick={()=>action({action:"enqueue",offerId:Number(offerId),channel,scheduledAt:when?new Date(when).toISOString():null})}>Adicionar à fila</button>
     </div>
     {connections.pinterest?.connected&&boards.length>0&&<label className="queueBoard">Pasta do Pinterest <select value={boardId} onChange={e=>setBoardId(e.target.value)}>{boards.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
-    <p className="muted">Pinterest: {connections.pinterest?.connected?"conectado":"conexão pendente"} · Telegram: {connections.telegram?.configured?"bot configurado":"bot pendente"} · Instagram: {connections.instagram?.configured?"credenciais cadastradas — use Verificar APIs":"envio assistido"}. Facebook, WhatsApp e TikTok continuam com publicação manual.</p>
+    <p className="muted">Pinterest: {connections.pinterest?.connected?"conectado":"conexão pendente"} · Telegram: {connections.telegram?.configured?"bot configurado":"bot pendente"} · Instagram: {connections.instagram?.configured?"credenciais cadastradas — use Verificar APIs":"envio assistido"} · Facebook: {connections.facebook?.configured?"credenciais cadastradas — use Verificar APIs":"envio assistido"}. WhatsApp e TikTok continuam com publicação manual.</p>
     <button className="mini secondaryMini" type="button" onClick={checkChannels}>Verificar APIs</button>{diagnostic&&<p role="status" className="muted">{diagnostic}</p>}
     {message&&<p role="status" className="noticeBox">{message}</p>}
     {tasks.length===0?<div className="empty">A fila está vazia. Escolha uma oferta e um canal para começar.</div>:
@@ -78,7 +79,7 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
       <div className="rowActions">
         <a className="mini" href={`/conteudo?oferta=${t.offer_id}&canal=${t.channel}`}>Preparar</a>
         <button className="mini secondaryMini" disabled={busy} onClick={()=>copy(t)}>Copiar link</button>
-        {((t.channel==="pinterest"&&connections.pinterest?.connected&&boardId)||(t.channel==="telegram"&&connections.telegram?.configured)||(t.channel==="instagram"&&connections.instagram?.configured))&&["ready","scheduled"].includes(t.status)&&<button className="mini publish" disabled={busy} onClick={()=>publish(t)}>Publicar pela API</button>}
+        {((t.channel==="pinterest"&&connections.pinterest?.connected&&boardId)||(t.channel==="telegram"&&connections.telegram?.configured)||(t.channel==="instagram"&&connections.instagram?.configured)||(t.channel==="facebook"&&connections.facebook?.configured))&&["ready","scheduled"].includes(t.status)&&<button className="mini publish" disabled={busy} onClick={()=>publish(t)}>Publicar pela API</button>}
         {t.channel==="whatsapp"&&<a className="mini" target="_blank" rel="noopener noreferrer" href={`https://wa.me/?text=${encodeURIComponent(`${t.title}\nConfira: ${origin}/go/${t.offer_id}?channel=whatsapp`)}`}>Abrir WhatsApp</a>}
         {!["telegram","pinterest"].includes(t.channel)&&t.status!=="published"&&<button className="mini publish" disabled={busy} onClick={()=>markManual(t)}>Já publiquei manualmente</button>}
         {["instagram","facebook","whatsapp","tiktok"].includes(t.channel)&&t.status==="published"&&t.attempts===0&&<button className="mini secondaryMini" disabled={busy} onClick={()=>action({action:"reopen",id:t.id})}>Voltar à fila</button>}

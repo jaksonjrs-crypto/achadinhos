@@ -1,6 +1,7 @@
 import { APP_VERSION } from "@/lib/version";
 import { listAllOffers } from "@/lib/offers";
 import { getDashboardStats } from "@/lib/analytics";
+import {facebookConfigured} from '@/lib/facebook';
 export const dynamic="force-dynamic";
 
 export default async function Prontidao(){
@@ -52,7 +53,8 @@ export default async function Prontidao(){
         <p><b>Pinterest</b><span className={pinterestReady?"readyPill":"waitPill"}>{pinterestReady?"OAuth disponível":"Credenciais pendentes"}</span></p>
         <p><b>Telegram</b><span className={telegramReady?"readyPill":"waitPill"}>{telegramReady?"Bot configurado":"Bot pendente"}</span></p>
         <p><b>Instagram</b><span className={instagramReady?"readyPill":"manualPill"}>{instagramReady?"Publicação automática":"Envio assistido"}</span></p>
-        <p><b>Facebook, WhatsApp e TikTok</b><span className="manualPill">Envio assistido</span></p>
+        <p><b>Facebook</b><span className={facebookConfigured()?"readyPill":"manualPill"}>{facebookConfigured()?"Credenciais cadastradas":"Envio assistido"}</span></p>
+        <p><b>WhatsApp e TikTok</b><span className="manualPill">Envio assistido</span></p>
       </div>
     </section>
 

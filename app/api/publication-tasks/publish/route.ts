@@ -4,6 +4,7 @@ import {pinterestFetch} from "@/lib/pinterest";
 import {productSafetyCheck} from "@/lib/product-safety";
 import {sendTelegramOffer} from "@/lib/telegram-publisher";
 import {publishInstagramImage} from "@/lib/instagram";
+import {publishFacebookPhoto} from '@/lib/facebook';
 export const dynamic="force-dynamic";
 
 export async function POST(req:NextRequest){
@@ -28,6 +29,9 @@ export async function POST(req:NextRequest){
         const caption=`🔥 Achado de hoje!\n\n${String(offer.title).slice(0,140)}\n💰 ${offer.price ? `R$ ${Number(offer.price).toFixed(2).replace('.',',')}` : ''}\n\n🔗 Confira a promoção pelo link da bio.\n\n*Promoção sujeita a alteração a qualquer momento.\n\n#VitrineDosAchados #Achadinhos #Ofertas`;
         const published=await publishInstagramImage({imageUrl:String(offer.image_url),caption});
         externalId=published.mediaId;
+      }else if(channel==='facebook'){
+        const price=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(offer.price));
+        externalId=(await publishFacebookPhoto({imageUrl:String(offer.image_url||''),message:`🔥 Achado de hoje!\n${String(offer.title).slice(0,140)}\n💰 ${price}\n🔗 Confira: https://www.minhavitrinedeachados.com.br/go/${offerId}?channel=facebook\nPromoção sujeita a alteração a qualquer momento. Podemos receber comissão pelas compras.\n#VitrineDosAchados #Achadinhos #Ofertas`})).postId;
       }else if(channel==='telegram'){
         externalId=await sendTelegramOffer(offer,offerId,new URL(req.url).origin);
       }else if(channel==='pinterest'){
