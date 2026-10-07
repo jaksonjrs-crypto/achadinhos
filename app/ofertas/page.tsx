@@ -9,6 +9,7 @@ export const metadata:Metadata={
   robots:{index:true,follow:true}
 };
 
+const discountPercent=(o:any)=>o.original_price>o.price&&o.original_price>0?Math.round((1-o.price/o.original_price)*100):0;
 const money=(v:number)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v);
 
 export default async function OfertasPage({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){
@@ -24,6 +25,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
     if(search)query.set("busca",search);
     return `/ofertas${query.size?`?${query.toString()}`:""}#ofertas`;
   };
+  const order=["relevancia","menor-preco","maior-desconto","recentes"].includes(params.ordem||"")?params.ordem!:"relevancia";
   const buscaNorm=busca.toLocaleLowerCase("pt-BR");
   let offers:any[]=[]; let unavailable=false;
   try{offers=await listPublishedOffers()}catch{unavailable=true}
@@ -31,6 +33,24 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
   let visible=selected?offers.filter((o:any)=>String(o.category||"")===selected):offers;
   if(marketplace)visible=visible.filter((o:any)=>String(o.marketplace||"").trim().toLocaleLowerCase("pt-BR")===marketplace.toLocaleLowerCase("pt-BR"));
   if(buscaNorm) visible=visible.filter((o:any)=>`${o.title} ${o.category} ${o.marketplace}`.toLocaleLowerCase("pt-BR").includes(buscaNorm));
+
+  if(order==="menor-preco")visible=[...visible].sort((a,b)=>a.price-b.price);
+  if(order==="maior-desconto")visible=[...visible].sort((a,b)=>discountPercent(b)-discountPercent(a));
+  if(order==="recentes")visible=[...visible].sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime());
+  const pageSize=12;
+  const totalPages=Math.max(1,Math.ceil(visible.length/pageSize));
+  const requestedPage=Number(params.pagina);
+  const page=Math.min(totalPages,Number.isSafeInteger(requestedPage)&&requestedPage>0?requestedPage:1);
+  const pageOffers=visible.slice((page-1)*pageSize,page*pageSize);
+  const pageUrl=(n:number)=>{
+    const query=new URLSearchParams();
+    if(selected)query.set("categoria",selected);
+    if(marketplace)query.set("marketplace",marketplace);
+    if(busca)query.set("busca",busca);
+    if(order!=="relevancia")query.set("ordem",order);
+    query.set("pagina",String(n));
+    return `/ofertas?${query.toString()}#ofertas`;
+  };
 
   return <main className="store">
     <section className="hero marketplaceHero">
@@ -55,11 +75,24 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
         <div><span className="eyebrow">VITRINE</span><h2>{busca?`Resultados para “${busca}”`:marketplace?marketplace:selected?selected:"Achados de hoje"}</h2></div>
         <span>{visible.length} oferta{visible.length===1?"":"s"}</span>
       </div>
+      <div className="catalogToolbar">
+        <p role="status">{visible.length>0?`${(page-1)*pageSize+1}–${Math.min(page*pageSize,visible.length)} de ${visible.length} ofertas`:"Explore nossa seleção"}</p>
+        <form action="/ofertas#ofertas" method="get">
+          {selected&&<input type="hidden" name="categoria" value={selected}/>}
+          {marketplace&&<input type="hidden" name="marketplace" value={marketplace}/>}
+          {busca&&<input type="hidden" name="busca" value={busca}/>}
+          <label htmlFor="catalogOrder">Ordenar</label>
+          <select id="catalogOrder" name="ordem" defaultValue={order}>
+            <option value="relevancia">Recomendados</option><option value="menor-preco">Menor preço</option>
+            <option value="maior-desconto">Maior desconto</option><option value="recentes">Novidades</option>
+          </select><button type="submit">Aplicar</button>
+        </form>
+      </div>
       <p className="affiliateNotice">Transparência: os botões “Ver oferta” podem usar links de afiliado. Podemos receber comissão pela compra, sem custo adicional para você.</p>
 
       {unavailable?<div className="empty"><b>Vitrine temporariamente indisponível.</b><br/>Tente novamente mais tarde.</div>:
        visible.length===0?<div className="empty"><b>{busca?"Nenhum achado encontrado.":selected||marketplace?"Nenhuma oferta nesta seleção agora.":"A primeira seleção está chegando."}</b><br/>{busca?"Tente outro termo ou limpe a busca.":selected||marketplace?"Escolha outra opção do menu para continuar.":"As ofertas aprovadas aparecerão aqui automaticamente."}</div>:
-       <div className="offerGrid">{visible.map((o:any)=>{
+       <div className="offerGrid">{pageOffers.map((o:any)=>{
          const discount=o.original_price&&o.original_price>o.price?Math.round((1-o.price/o.original_price)*100):0;
          return <article className="offerCard" key={o.id}>
            {o.image_url?<img src={o.image_url} alt={o.title} loading="lazy"/>:<div className="placeholder">Vitrine<br/>dos Achados</div>}
@@ -73,6 +106,11 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
            </div>
          </article>
        })}</div>}
+      {visible.length>0&&<nav className="catalogPagination" aria-label="Páginas de ofertas">
+        {page>1?<a href={pageUrl(page-1)} rel="prev">← Anterior</a>:<span aria-disabled="true">← Anterior</span>}
+        <span className="pagePosition">Página {page} de {totalPages}</span>
+        {page<totalPages?<a href={pageUrl(page+1)} rel="next">Próxima →</a>:<span aria-disabled="true">Próxima →</span>}
+      </nav>}
     </section>
     <footer>Vitrine dos Achados · Achados que valem a pena. <span>Preços e disponibilidade podem mudar no marketplace.</span> <a href="/politica-de-privacidade">Política de Privacidade</a></footer>
     <div className="publicVersion">{APP_VERSION}</div>
