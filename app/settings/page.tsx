@@ -58,7 +58,7 @@ export default function SettingsPage() {
         <p><b>OAuth da conta</b>{pill(Boolean(pinterest?.connected))}</p>
       </div>
       {pinterest?.envConfigured&&!pinterest?.connected&&<a className="button" href="/api/auth/pinterest/login">Conectar Pinterest</a>}
-      {pinterest?.connected&&<a className="button" href="/divulgacao">Abrir publicação Pinterest</a>}
+      {pinterest?.connected&&<><a className="button" href="/divulgacao">Abrir publicação Pinterest</a>{" "}<a className="button" href="/api/auth/pinterest/login">Reconectar Pinterest</a></>}
       <p className="muted">Tokens ficam protegidos no servidor e não são exibidos no navegador.</p>
     </section>
 
