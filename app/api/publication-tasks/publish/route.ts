@@ -1,6 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {ensurePublicationQueue} from "@/lib/publication-queue";
-import {pinterestFetch} from "@/lib/pinterest";
+import {pinterestFetch,pinterestEnvironment} from "@/lib/pinterest";
 import {productSafetyCheck} from "@/lib/product-safety";
 import {sendTelegramOffer} from "@/lib/telegram-publisher";
 import {publishInstagramImage} from "@/lib/instagram";
@@ -43,6 +43,11 @@ export async function POST(req:NextRequest){
         externalId=String(data.id||'');
       }else throw new Error("Este canal usa publicação assistida nesta versão.");
       accepted=true;
+      if(channel==="pinterest"&&pinterestEnvironment==="sandbox"){
+        const testId="sandbox:"+externalId;
+        await sql`UPDATE publication_tasks SET status='skipped',external_id=${testId},published_at=NULL,last_error='Teste Sandbox concluído. Não houve divulgação em produção.',updated_at=NOW() WHERE id=${id}`;
+        return NextResponse.json({ok:true,externalId,sandbox:true});
+      }
       await sql`UPDATE publication_tasks SET status='published',external_id=${externalId||null},published_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=${id}`;
       return NextResponse.json({ok:true,externalId});
     }catch(e:any){
