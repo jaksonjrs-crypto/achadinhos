@@ -23,7 +23,7 @@ export function authorizationUrl(state:string){
   u.searchParams.set("client_id",clientId);
   u.searchParams.set("redirect_uri",redirectUri);
   u.searchParams.set("response_type","code");
-  u.searchParams.set("scope","boards:read,pins:read,pins:write,user_accounts:read");
+  u.searchParams.set("scope","boards:read,boards:write,pins:read,pins:write,user_accounts:read");
   u.searchParams.set("state",state);
   return u.toString();
 }
