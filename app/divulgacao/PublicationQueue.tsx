@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useState} from "react";
 
 type Offer={id:number;title:string;marketplace:string;price:number};
-type Task={id:number;offer_id:number;channel:string;status:string;cycle_date:string;scheduled_at:string|null;title:string;price:number;marketplace:string;last_error:string|null;attempts:number};
+type Task={id:number;offer_id:number;channel:string;status:string;cycle_date:string;scheduled_at:string|null;title:string;price:number;marketplace:string;last_error:string|null;attempts:number;external_id?:string|null};
 const channels=[["pinterest","Pinterest"],["instagram","Instagram"],["facebook","Facebook"],["telegram","Telegram"],["whatsapp","WhatsApp"],["tiktok","TikTok"]] as const;
 const labels:Record<string,string>=Object.fromEntries(channels);
 const states:Record<string,string>={ready:"Pronto",scheduled:"Agendado",publishing:"Enviando",published:"Concluído",failed:"Falhou",skipped:"Ignorado"};
@@ -11,8 +11,9 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
   const [tasks,setTasks]=useState<Task[]>([]),[offerId,setOfferId]=useState(String(offers[0]?.id||""));
   const [channel,setChannel]=useState("pinterest"),[when,setWhen]=useState(""),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
   const [origin,setOrigin]=useState("");
-  const [connections,setConnections]=useState<Record<string,{connected?:boolean;configured?:boolean}>>({});
+  const [connections,setConnections]=useState<Record<string,{connected?:boolean;configured?:boolean;environment?:string}>>({});
   const [boards,setBoards]=useState<{id:string;name:string}[]>([]),[boardId,setBoardId]=useState("");
+  const sandbox=connections.pinterest?.environment==="sandbox";
   const [diagnostic,setDiagnostic]=useState("");
   const reload=useCallback(async()=>{const r=await fetch("/api/publication-tasks",{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Falha ao carregar fila");setTasks(d.tasks||[])},[]);
   useEffect(()=>{
@@ -22,9 +23,20 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
       if(s.pinterest?.connected){const r=await fetch("/api/pinterest/boards");const d=await r.json();if(d.ok){const items:{id:string;name:string}[]=(d.items||[]).map((b:{id:string;name:string})=>({...b,id:String(b.id)}));setBoards(items);
         let saved="";try{saved=localStorage.getItem("garimpo:pinterest-board:v1")||""}catch{}
         const preferred=items.find(b=>b.id===saved)||items.find(b=>b.name.trim().toLocaleLowerCase("pt-BR")==="vitrine dos achados");
-        setBoardId(preferred?.id||"")}}
+        setBoardId(preferred?.id||"")}else{setMessage(d.error||"Falha ao listar pastas do Pinterest.")}}
     }).catch(()=>{});
   },[reload]);
+  async function createTestBoard(){
+    setBusy(true);setMessage("");
+    try{
+      const r=await fetch("/api/pinterest/boards",{method:"POST"});
+      const d=await r.json();
+      if(!r.ok||!d.ok)throw new Error(d.error||"Falha ao preparar pasta de teste.");
+      const board={id:String(d.board.id),name:String(d.board.name)};
+      setBoards(previous=>[...previous.filter(b=>b.id!==board.id),board]);setBoardId(board.id);
+      setMessage("Pasta de teste selecionada. Escolha um item pronto para testar.");
+    }catch(e:any){setMessage(e?.message||"Falha no Sandbox.")}finally{setBusy(false)}
+  }
   async function action(body:Record<string,unknown>){
     setBusy(true);setMessage("");
     try{const r=await fetch("/api/publication-tasks",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||"Falha ao atualizar fila");await reload();setMessage(body.action==="enqueue"?"Item incluído na fila.":body.action==="reopen"?"Item devolvido à fila. Nenhuma publicação foi enviada.":body.status==="published"?"Publicação manual registrada. Este botão não envia conteúdo à rede.":"Estado atualizado.")}
@@ -59,13 +71,14 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
   async function publish(t:Task){
     if(t.channel==="pinterest"&&!boards.some(b=>b.id===boardId)){setMessage("Selecione uma pasta do Pinterest antes de publicar.");return}
     setBusy(true);setMessage("");
-    try{const r=await fetch("/api/publication-tasks/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:t.id,boardId:t.channel==="pinterest"?boardId:undefined})});const d=await r.json();await reload();if(!r.ok)throw new Error(d.error||"Falha na publicação");setMessage(`${labels[t.channel]}: publicação confirmada.`)}
+    try{const r=await fetch("/api/publication-tasks/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:t.id,boardId:t.channel==="pinterest"?boardId:undefined})});const d=await r.json();await reload();if(!r.ok)throw new Error(d.error||"Falha na publicação");setMessage(d.sandbox?`Pinterest: teste Sandbox confirmado. Pin ${d.externalId}. Não houve divulgação em produção.`:`${labels[t.channel]}: publicação confirmada.`)}
     catch(e:any){setMessage(e?.message||"Falha na publicação")}finally{setBusy(false)}
   }
   const pending=tasks.filter(t=>!["published","skipped"].includes(t.status)).length;
   return <section className="integrationBox publicationQueue">
     <div className="sectionTitle"><div><span className="eyebrow">DIVULGAÇÃO</span><h2>Fila operacional</h2></div><span>{pending} pendentes</span></div>
     <p className="muted">Cadastros manuais publicados e completos também entram na fila, incluindo Mercado Livre. Atualizar o cadastro não repete o envio. Agendar organiza a fila; o envio automático só ocorre em canais conectados e habilitados para isso.</p>
+    {sandbox&&<div className="noticeBox"><b>Pinterest — Sandbox</b><p>Publicações de demonstração, sem divulgação em produção.</p>{connections.pinterest?.connected?<button className="mini" disabled={busy} onClick={createTestBoard}>Preparar pasta de teste</button>:<a className="button" href="/api/auth/pinterest/login">Conectar Pinterest Sandbox</a>}</div>}
     <div className="queueComposer">
       <label>Oferta<select value={offerId} onChange={e=>setOfferId(e.target.value)}>{offers.map(o=><option key={o.id} value={o.id}>{o.marketplace} · {o.title}</option>)}</select></label>
       <label>Canal<select value={channel} onChange={e=>setChannel(e.target.value)}>{channels.map(([key,name])=><option key={key} value={key}>{name}</option>)}</select></label>
@@ -79,11 +92,11 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
     {tasks.length===0?<div className="empty">A fila está vazia. Escolha uma oferta e um canal para começar.</div>:
     <div className="queueList">{tasks.map(t=><article className="queueItem" key={t.id}>
       <div><b>{t.title}</b><small>{t.marketplace} · {labels[t.channel]||t.channel} · {String(t.cycle_date).slice(0,10)}{t.scheduled_at?` · ${new Date(t.scheduled_at).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})}`:""}</small>{t.last_error&&<small className="queueError">{t.last_error}</small>}</div>
-      <span className="channelTag">{states[t.status]||t.status}</span>
+      <span className="channelTag">{t.status==="skipped"&&t.external_id?.startsWith("sandbox:")?"Teste concluído":states[t.status]||t.status}</span>
       <div className="rowActions">
         <a className="mini" href={`/conteudo?oferta=${t.offer_id}&canal=${t.channel}`}>Preparar</a>
         <button className="mini secondaryMini" disabled={busy} onClick={()=>copy(t)}>Copiar link</button>
-        {((t.channel==="pinterest"&&connections.pinterest?.connected&&boardId)||(t.channel==="telegram"&&connections.telegram?.configured)||(t.channel==="instagram"&&connections.instagram?.configured)||(t.channel==="facebook"&&connections.facebook?.configured))&&["ready","scheduled"].includes(t.status)&&<button className="mini publish" disabled={busy} onClick={()=>publish(t)}>Publicar pela API</button>}
+        {((t.channel==="pinterest"&&connections.pinterest?.connected&&boardId)||(t.channel==="telegram"&&connections.telegram?.configured)||(t.channel==="instagram"&&connections.instagram?.configured)||(t.channel==="facebook"&&connections.facebook?.configured))&&["ready","scheduled"].includes(t.status)&&<button className="mini publish" disabled={busy} onClick={()=>publish(t)}>{t.channel==="pinterest"&&sandbox?"Testar no Sandbox":"Publicar pela API"}</button>}
         {t.channel==="whatsapp"&&<a className="mini" target="_blank" rel="noopener noreferrer" href={`https://wa.me/?text=${encodeURIComponent(`${t.title}\nConfira: ${origin}/go/${t.offer_id}?channel=whatsapp`)}`}>Abrir WhatsApp</a>}
         {!["telegram","pinterest"].includes(t.channel)&&t.status!=="published"&&<button className="mini publish" disabled={busy} onClick={()=>markManual(t)}>Já publiquei manualmente</button>}
         {["instagram","facebook","whatsapp","tiktok"].includes(t.channel)&&t.status==="published"&&t.attempts===0&&<button className="mini secondaryMini" disabled={busy} onClick={()=>action({action:"reopen",id:t.id})}>Voltar à fila</button>}
