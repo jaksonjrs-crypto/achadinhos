@@ -1,7 +1,10 @@
 import { db } from "./db";
 import { decryptSecret, encryptSecret } from "./crypto";
 
-const API="https://api.pinterest.com/v5";
+// Trial access uses Sandbox; production requires an explicit switch after Standard approval.
+export const pinterestEnvironment=process.env.PINTEREST_ENVIRONMENT?.trim()==="sandbox"?"sandbox":"production";
+const CONNECTION=pinterestEnvironment==="sandbox"?"pinterest_sandbox":"pinterest";
+const API=pinterestEnvironment==="sandbox"?"https://api-sandbox.pinterest.com/v5":"https://api.pinterest.com/v5";
 const OAUTH="https://www.pinterest.com/oauth/";
 
 type TokenResponse={
@@ -62,7 +65,7 @@ export async function saveConnection(t:TokenResponse){
     INSERT INTO marketplace_connections
       (marketplace,external_user_id,access_token_enc,refresh_token_enc,token_type,expires_at,scopes,updated_at)
     VALUES
-      ('pinterest',${external},${encryptSecret(t.access_token)},
+      (${CONNECTION},${external},${encryptSecret(t.access_token)},
        ${t.refresh_token?encryptSecret(t.refresh_token):null},${t.token_type||"bearer"},
        ${expiresAt.toISOString()},${t.scope||null},NOW())
     ON CONFLICT (marketplace,external_user_id)
@@ -76,7 +79,7 @@ export async function saveConnection(t:TokenResponse){
 
 async function latest(){
   const sql=db();
-  const rows=await sql`SELECT * FROM marketplace_connections WHERE marketplace='pinterest' ORDER BY updated_at DESC LIMIT 1`;
+  const rows=await sql`SELECT * FROM marketplace_connections WHERE marketplace=${CONNECTION} ORDER BY updated_at DESC LIMIT 1`;
   return rows[0] as any;
 }
 
@@ -91,7 +94,7 @@ async function refresh(row:any){
 
 export async function accessToken(){
   const row=await latest();
-  if(!row) throw new Error("Pinterest ainda não conectado.");
+  if(!row) throw new Error(`Pinterest ${pinterestEnvironment}: conecte a conta em Configurações.`);
   if(row.expires_at && new Date(row.expires_at).getTime()>Date.now()+120000) return decryptSecret(row.access_token_enc);
   return refresh(row);
 }
@@ -109,6 +112,25 @@ export async function pinterestFetch(path:string,init:RequestInit={}){
 export async function connectionStatus(){
   try{
     const row=await latest();
-    return row?{connected:true,scopes:row.scopes||"",updated_at:row.updated_at}:{connected:false};
-  }catch{return {connected:false};}
+    return row?{connected:true,environment:pinterestEnvironment,scopes:row.scopes||"",updated_at:row.updated_at}:{connected:false,environment:pinterestEnvironment};
+  }catch{return {connected:false,environment:pinterestEnvironment};}
+}
+
+export async function listPinterestBoards(){
+  const items:{id:string;name:string}[]=[];
+  let bookmark="";
+  const seen=new Set<string>();
+  for(let page=0;page<40;page++){
+    const query=new URLSearchParams({page_size:"250"});
+    if(bookmark)query.set("bookmark",bookmark);
+    const r=await pinterestFetch("/boards?"+query);
+    const data=await r.json();
+    if(!r.ok)throw new Error(data?.message||"Falha ao listar pastas.");
+    for(const b of data.items||[])items.push({id:String(b.id),name:String(b.name)});
+    bookmark=data.bookmark||"";
+    if(!bookmark)return items;
+    if(seen.has(bookmark))throw new Error("Paginação de pastas repetida. Tente novamente.");
+    seen.add(bookmark);
+  }
+  throw new Error("Não foi possível concluir a lista de pastas. Tente novamente.");
 }
