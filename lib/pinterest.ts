@@ -2,7 +2,7 @@ import { db } from "./db";
 import { decryptSecret, encryptSecret } from "./crypto";
 
 // Trial access uses Sandbox; production requires an explicit switch after Standard approval.
-export const pinterestEnvironment=process.env.PINTEREST_ENVIRONMENT?.trim()==="sandbox"?"sandbox":"production";
+export const pinterestEnvironment=process.env.PINTEREST_ENVIRONMENT?.trim()==="production"?"production":"sandbox";
 const CONNECTION=pinterestEnvironment==="sandbox"?"pinterest_sandbox":"pinterest";
 const API=pinterestEnvironment==="sandbox"?"https://api-sandbox.pinterest.com/v5":"https://api.pinterest.com/v5";
 const OAUTH="https://www.pinterest.com/oauth/";
