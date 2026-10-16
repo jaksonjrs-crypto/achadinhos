@@ -19,7 +19,10 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
     setOrigin(location.origin);reload().catch(e=>setMessage(e.message));
     fetch("/api/channels/status",{cache:"no-store"}).then(r=>r.json()).then(async s=>{
       setConnections(s);
-      if(s.pinterest?.connected){const r=await fetch("/api/pinterest/boards");const d=await r.json();if(d.ok){setBoards(d.items||[]);setBoardId(String(d.items?.[0]?.id||""))}}
+      if(s.pinterest?.connected){const r=await fetch("/api/pinterest/boards");const d=await r.json();if(d.ok){const items:{id:string;name:string}[]=(d.items||[]).map((b:{id:string;name:string})=>({...b,id:String(b.id)}));setBoards(items);
+        let saved="";try{saved=localStorage.getItem("garimpo:pinterest-board:v1")||""}catch{}
+        const preferred=items.find(b=>b.id===saved)||items.find(b=>b.name.trim().toLocaleLowerCase("pt-BR")==="vitrine dos achados");
+        setBoardId(preferred?.id||"")}}
     }).catch(()=>{});
   },[reload]);
   async function action(body:Record<string,unknown>){
@@ -54,6 +57,7 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
     }catch{setDiagnostic('Não foi possível verificar os canais.')}
   }
   async function publish(t:Task){
+    if(t.channel==="pinterest"&&!boards.some(b=>b.id===boardId)){setMessage("Selecione uma pasta do Pinterest antes de publicar.");return}
     setBusy(true);setMessage("");
     try{const r=await fetch("/api/publication-tasks/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:t.id,boardId:t.channel==="pinterest"?boardId:undefined})});const d=await r.json();await reload();if(!r.ok)throw new Error(d.error||"Falha na publicação");setMessage(`${labels[t.channel]}: publicação confirmada.`)}
     catch(e:any){setMessage(e?.message||"Falha na publicação")}finally{setBusy(false)}
@@ -68,7 +72,7 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
       <label>Agendar (opcional)<input type="datetime-local" value={when} onChange={e=>setWhen(e.target.value)}/></label>
       <button className="mini publish" disabled={busy||!offerId} onClick={()=>action({action:"enqueue",offerId:Number(offerId),channel,scheduledAt:when?new Date(when).toISOString():null})}>Adicionar à fila</button>
     </div>
-    {connections.pinterest?.connected&&boards.length>0&&<label className="queueBoard">Pasta do Pinterest <select value={boardId} onChange={e=>setBoardId(e.target.value)}>{boards.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
+    {connections.pinterest?.connected&&boards.length>0&&<label className="queueBoard">Pasta do Pinterest <select value={boardId} onChange={e=>{setBoardId(e.target.value);try{localStorage.setItem("garimpo:pinterest-board:v1",e.target.value)}catch{}}}><option value="">Selecione uma pasta</option>{boards.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
     <p className="muted">Pinterest: {connections.pinterest?.connected?"conectado":"conexão pendente"} · Telegram: {connections.telegram?.configured?"bot configurado":"bot pendente"} · Instagram: {connections.instagram?.configured?"credenciais cadastradas — use Verificar APIs":"envio assistido"} · Facebook: {connections.facebook?.configured?"credenciais cadastradas — use Verificar APIs":"envio assistido"}. WhatsApp e TikTok continuam com publicação manual.</p>
     <button className="mini secondaryMini" type="button" onClick={checkChannels}>Verificar APIs</button>{diagnostic&&<p role="status" className="muted">{diagnostic}</p>}
     {message&&<p role="status" className="noticeBox">{message}</p>}
