@@ -52,6 +52,7 @@ export default function SettingsPage() {
 
     <section className="integrationBox">
       <span className="channelTag">Pinterest</span>
+      <p className="noticeBox">{pinterest?.environment==="sandbox"?"Modo Sandbox: testes sem divulgação em produção. Conecte a conta para iniciar a demonstração.":"Ambiente de produção"}</p>
       <h2>{pinterest?.connected?"Conta Business conectada":"API oficial"}</h2>
       <div className="integrationRows">
         <p><b>Credenciais do aplicativo</b>{pill(Boolean(pinterest?.envConfigured))}</p>
