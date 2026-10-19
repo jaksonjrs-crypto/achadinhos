@@ -64,8 +64,8 @@ export async function importShopeeCandidates({page=1,limit=20,keyword="",categor
       }
       try{
         const originalUrl=canonicalProductUrl(p);
-        affiliateUrl=await generateShopeeLink(originalUrl,'VITRINE_GARIMPO_2026');
-        await registerAffiliateLink(affiliateUrl,String(p.itemId),originalUrl,'VITRINE_GARIMPO_2026');
+        affiliateUrl=await generateShopeeLink(originalUrl,'VITRINEGARIMPO2026');
+        await registerAffiliateLink(affiliateUrl,String(p.itemId),originalUrl,'VITRINEGARIMPO2026');
       }catch{failedLinks++;continue}
       const price=num(p.price)||null;
       const notes=[

@@ -59,7 +59,7 @@ export async function fetchShopeeProducts(page=1,limit=20,keyword?:string,itemId
 
 export function shortLinkPayload(originUrl:string,subId:string){
   if(!productIdentity(originUrl))throw Error('Use o endereço completo do produto Shopee.');
-  if(!/^[A-Za-z0-9_]{1,50}$/.test(subId))throw Error('Sub ID inválido.');
+  if(!/^[A-Za-z0-9]{1,50}$/.test(subId))throw Error('Sub ID da API: use somente letras e números, sem sublinhados.');
   return {query:`mutation { generateShortLink(input: {originUrl: ${JSON.stringify(originUrl)}, subIds: [${JSON.stringify(subId)}]}) { shortLink } }`};
 }
 export async function generateShopeeLink(originUrl:string,subId:string){

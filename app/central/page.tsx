@@ -1,3 +1,4 @@
+import ImportOffers from './ImportOffers';
 import RepairLinks from './RepairLinks';
 import {filterOffers} from '@/lib/offer-filters';
 import BatchPublishButton from "./BatchPublishButton";
@@ -51,7 +52,7 @@ export default async function Central({searchParams}:{searchParams:Promise<Recor
     </details>
 
     {params.saved&&<p role="status">{params.saved}</p>}
-    <div className="contentWorkflowActions"><a className="button" href={`/api/offers/export?${exportParams}&format=xlsx`}>Exportar Excel (.xlsx)</a><a className="button" href={`/api/offers/export?${exportParams}&format=csv`}>Exportar para Google Sheets (CSV)</a></div>
+    <div className="contentWorkflowActions"><a className="button" href={`/api/offers/export?${exportParams}&format=xlsx`}>Exportar Excel (.xlsx)</a><ImportOffers format="xlsx"/><a className="button" href={`/api/offers/export?${exportParams}&format=csv`}>Exportar para Google Sheets (CSV)</a><ImportOffers format="csv"/></div>
     <p className="muted">Exportação respeita os filtros. Vermelho no Excel indica link citado no chamado ainda sem conversão confirmada. No Google Sheets, importe o CSV com separador vírgula.</p>
     <RepairLinks/>
     <div className="centralActionBar"><SyncCatalogButton/><BatchPublishButton /></div>

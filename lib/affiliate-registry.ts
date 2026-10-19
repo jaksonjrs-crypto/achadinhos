@@ -22,7 +22,7 @@ export async function registerAffiliateLink(link:string,itemId:string,originalUr
     VALUES(${link},${itemId},${originalUrl},${subId}) ON CONFLICT(affiliate_url) DO UPDATE
     SET external_id=EXCLUDED.external_id,original_url=EXCLUDED.original_url,sub_id=EXCLUDED.sub_id,verified_at=NOW()`;
 }
-export async function convertShopeeOffer(itemId:string,inputLink:string,subId='VITRINE_ATUALIZACAO_2026'){
+export async function convertShopeeOffer(itemId:string,inputLink:string,subId='VITRINEATUALIZACAO2026'){
   if(!numericItemId(itemId))throw Error('Informe o ID numérico do produto Shopee para validar o link e atualizar preços.');
   if(!isShopeeUrl(inputLink))throw Error('Use Compartilhe para Ganhar > Copiar Link, ou o endereço completo do produto Shopee.');
   const identity=productIdentity(inputLink);
@@ -41,7 +41,7 @@ export async function verifiedShopeeLink(itemId:string,link:string){
   const sql=await ensureAffiliateRegistry();
   const known=await sql`SELECT external_id FROM affiliate_link_registry WHERE affiliate_url=${link} AND external_id=${itemId} LIMIT 1`;
   if(known.length)return {link,itemId};
-  return convertShopeeOffer(itemId,link,'VITRINE_CADASTRO_2026');
+  return convertShopeeOffer(itemId,link,'VITRINECADASTRO2026');
 }
 
 export async function ensureOfferAffiliate(offerId:number){
