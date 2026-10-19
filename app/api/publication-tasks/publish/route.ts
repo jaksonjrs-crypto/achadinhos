@@ -5,6 +5,8 @@ import {productSafetyCheck} from "@/lib/product-safety";
 import {sendTelegramOffer} from "@/lib/telegram-publisher";
 import {publishInstagramImage} from "@/lib/instagram";
 import {publishFacebookPhoto} from '@/lib/facebook';
+import {prepareManychat} from '@/lib/manychat';
+export const maxDuration=300;
 export const dynamic="force-dynamic";
 
 export async function POST(req:NextRequest){
@@ -24,6 +26,10 @@ export async function POST(req:NextRequest){
       const offer:any=offers[0];
       if(!offer||offer.status!=='published'||!productSafetyCheck(String(offer.title||'')).allowed) throw new Error("Oferta indisponível ou bloqueada.");
       const link=`${new URL(req.url).origin}/o/${offerId}?c=${channel==='telegram'?'t':'p'}`;
+      let manychat:any=null;
+      if(channel==='instagram'||channel==='facebook'){
+        manychat=await prepareManychat(offerId,channel,new URL(req.url).origin,true);
+      }
       if(channel==='instagram'){
         if(!offer.image_url) throw new Error("Instagram exige uma imagem pública na oferta.");
         const caption=`🔥 Achado de hoje!\n\n${String(offer.title).slice(0,140)}\n💰 ${offer.price ? `R$ ${Number(offer.price).toFixed(2).replace('.',',')}` : ''}\n\n🔗 Confira a promoção pelo link da bio.\n\n*Promoção sujeita a alteração a qualquer momento.\n\n#VitrineDosAchados #Achadinhos #Ofertas`;
@@ -49,7 +55,7 @@ export async function POST(req:NextRequest){
         return NextResponse.json({ok:true,externalId,sandbox:true});
       }
       await sql`UPDATE publication_tasks SET status='published',external_id=${externalId||null},published_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=${id}`;
-      return NextResponse.json({ok:true,externalId});
+      return NextResponse.json({ok:true,externalId,manychat});
     }catch(e:any){
       if(accepted){
         console.error('Publication accepted but not recorded',{id,externalId,error:String(e?.message||e)});
@@ -63,3 +69,4 @@ export async function POST(req:NextRequest){
     }
   }catch(e:any){console.error('Publication dispatch:',e?.message||e);return NextResponse.json({ok:false,error:'Não foi possível processar a publicação.'},{status:500})}
 }
+

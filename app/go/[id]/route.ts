@@ -26,7 +26,11 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{id:string}>}
     try{await sql`INSERT INTO offer_clicks(offer_id,source,user_agent) VALUES(${n},${channel},${userAgent})`;}
     catch(legacyError){console.error("[click-tracking] Falha ao registrar clique",{offerId:n,channel,modernError,legacyError});}
   }
-  const response=NextResponse.redirect(String(rows[0].affiliate_url),302);
+  const destination=new URL(String(rows[0].affiliate_url));
+  if(req.nextUrl.searchParams.get('utm_medium')==='manychat'&&['instagram','facebook'].includes(channel)){
+    destination.searchParams.set('utm_source',channel);destination.searchParams.set('utm_medium','manychat');
+  }
+  const response=NextResponse.redirect(destination,302);
   response.headers.set("Cache-Control","no-store, max-age=0");
   return response;
 }

@@ -1,6 +1,9 @@
 import {db} from "./db";
-import {fetchShopeeProducts} from "./shopee-affiliate";
+import {fetchShopeeProducts,generateShopeeLink} from "./shopee-affiliate";
 import {productSafetyCheck} from "./product-safety";
+
+import {canonicalProductUrl} from './shopee-links';
+import {registerAffiliateLink} from './affiliate-registry';
 
 function num(v:any){const n=Number(v);return Number.isFinite(n)?n:0}
 function optionalNum(v:any){if(v===null||v===undefined||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null}
@@ -28,11 +31,11 @@ export async function importShopeeCandidates({page=1,limit=20,keyword="",categor
     minScore=Number.isFinite(minScore)?Math.min(100,Math.max(0,minScore)):65;
     const data=await fetchShopeeProducts(page,limit,keyword||undefined);
     const sql=db();
-    let imported=0, skippedUnsafe=0, skippedDuplicate=0, skippedQuality=0;
+    let imported=0, skippedUnsafe=0, skippedDuplicate=0, skippedQuality=0, failedLinks=0;
 
     for(const p of data.nodes||[]){
       const title=String(p.productName||"").trim();
-      const affiliateUrl=String(p.offerLink||"").trim();
+      let affiliateUrl=String(p.offerLink||"").trim();
       if(!title||!affiliateUrl) continue;
       if(!productSafetyCheck(title,"Shopee","Importado via Shopee Affiliate Open API").allowed){
         skippedUnsafe++; continue;
@@ -59,6 +62,11 @@ export async function importShopeeCandidates({page=1,limit=20,keyword="",categor
       if(candidateScore<minScore || !hasTrustSignal || !hasOfferSignal){
         skippedQuality++;continue
       }
+      try{
+        const originalUrl=canonicalProductUrl(p);
+        affiliateUrl=await generateShopeeLink(originalUrl,'VITRINE_GARIMPO_2026');
+        await registerAffiliateLink(affiliateUrl,String(p.itemId),originalUrl,'VITRINE_GARIMPO_2026');
+      }catch{failedLinks++;continue}
       const price=num(p.price)||null;
       const notes=[
         "Importado via Shopee Affiliate Open API",
@@ -75,5 +83,5 @@ export async function importShopeeCandidates({page=1,limit=20,keyword="",categor
         ON CONFLICT DO NOTHING RETURNING id`;
       if(inserted.length) imported++; else skippedDuplicate++;
     }
-    return {ok:true,imported,skippedUnsafe,skippedDuplicate,skippedQuality,received:(data.nodes||[]).length,pageInfo:data.pageInfo,keyword:keyword||null,minScore};
+    return {ok:true,imported,skippedUnsafe,skippedDuplicate,skippedQuality,failedLinks,received:(data.nodes||[]).length,pageInfo:data.pageInfo,keyword:keyword||null,minScore};
 }

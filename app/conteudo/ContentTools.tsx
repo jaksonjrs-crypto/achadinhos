@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import ManychatOffer from "./ManychatOffer";
 
 type Channel="instagram"|"facebook"|"whatsapp"|"telegram"|"pinterest"|"tiktok"|"vitrine";
 type Props={id:number;title:string;priceLabel:string;marketplace:string;initialChannel?:Channel};
@@ -81,5 +82,6 @@ export default function ContentTools({id,title,priceLabel,marketplace,initialCha
         <div className="contentScroll"><p>{selectedText}</p></div>
       </div>
     </div>
+    {(contentType==="instagram"||contentType==="facebook")&&<ManychatOffer key={`${id}-${contentType}`} id={id} channel={contentType}/>}
   </>;
 }

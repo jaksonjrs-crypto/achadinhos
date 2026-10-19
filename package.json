@@ -1,6 +1,6 @@
 {
   "name": "vitrine-dos-achados",
-  "version": "3.4.4",
+  "version": "3.5.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,6 +11,7 @@
     "test:manual-distribution": "node tests/manual-distribution.cjs",
     "test:autopilot-schedule": "node tests/autopilot-schedule.cjs",
     "test:catalog-price": "node tests/catalog-price.cjs",
+    "test:affiliate-export": "node tests/affiliate-export.cjs",
     "test:facebook": "node tests/facebook-publisher.cjs"
   },
   "dependencies": {

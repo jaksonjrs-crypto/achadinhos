@@ -29,7 +29,7 @@ export default function ShopeeImportButton(){
       const j=await r.json();
       if(!r.ok||!j.ok) throw new Error(j.error||"Falha");
       setPage(target);
-      setState(`${j.imported} importados · ${j.skippedQuality} abaixo do corte · ${j.skippedDuplicate} duplicados · ${j.skippedUnsafe} bloqueados`);
+      setState(`${j.imported} importados · ${j.skippedQuality} abaixo do corte · ${j.skippedDuplicate} duplicados · ${j.skippedUnsafe} bloqueados · ${j.failedLinks||0} falhas de conversão de link`);
       router.refresh();
     }catch(e:any){setState(e.message||"Falha ao importar")}
     finally{setBusy(false)}

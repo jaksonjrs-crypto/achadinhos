@@ -71,7 +71,7 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
   async function publish(t:Task){
     if(t.channel==="pinterest"&&!boards.some(b=>b.id===boardId)){setMessage("Selecione uma pasta do Pinterest antes de publicar.");return}
     setBusy(true);setMessage("");
-    try{const r=await fetch("/api/publication-tasks/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:t.id,boardId:t.channel==="pinterest"?boardId:undefined})});const d=await r.json();await reload();if(!r.ok)throw new Error(d.error||"Falha na publicação");setMessage(d.sandbox?`Pinterest: teste Sandbox confirmado. Pin ${d.externalId}. Não houve divulgação em produção.`:`${labels[t.channel]}: publicação confirmada.`)}
+    try{const r=await fetch("/api/publication-tasks/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:t.id,boardId:t.channel==="pinterest"?boardId:undefined})});const d=await r.json();await reload();if(!r.ok)throw new Error(d.error||"Falha na publicação");setMessage(d.sandbox?`Pinterest: teste Sandbox confirmado. Pin ${d.externalId}. Não houve divulgação em produção.`:`${labels[t.channel]}: publicação confirmada.${d.manychat?` Manychat: ${d.manychat.note}`:""}`)}
     catch(e:any){setMessage(e?.message||"Falha na publicação")}finally{setBusy(false)}
   }
   const pending=tasks.filter(t=>!["published","skipped"].includes(t.status)).length;
@@ -107,3 +107,4 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
     </article>)}</div>}
   </section>
 }
+

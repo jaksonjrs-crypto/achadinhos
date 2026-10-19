@@ -1,6 +1,8 @@
 import {db} from "./db";
 import {productSafetyCheck} from "./product-safety";
 
+import {verifiedShopeeLink} from './affiliate-registry';
+
 export type AutopilotResult={ok:boolean;offerId?:number;published?:boolean;created?:boolean;reason?:string};
 
 const complete=(c:any)=>Boolean(String(c.title||"").trim()&&String(c.image_url||"").trim()&&Number(c.price)>0&&String(c.product_url||"").trim());
@@ -14,6 +16,10 @@ export async function autopilotCandidate(candidateId:number):Promise<AutopilotRe
  if(!complete(c)){
    await sql`UPDATE product_candidates SET status='approved',updated_at=NOW() WHERE id=${candidateId}`;
    return {ok:true,published:false,reason:"Aguardando imagem, preço ou link"};
+ }
+ if(String(c.marketplace).toLowerCase()==='shopee'){
+   try{c.product_url=(await verifiedShopeeLink(String(c.external_id||''),String(c.product_url))).link}
+   catch{return {ok:false,published:false,reason:'Link Shopee não validado. Revise o ID do produto e a API.'}}
  }
  let productId:number|null=null;
  if(c.external_id){
