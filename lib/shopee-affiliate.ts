@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import {isShopeeUrl,productIdentity} from './shopee-links';
 
 const ENDPOINT="https://open-api.affiliate.shopee.com.br/graphql";
 
@@ -54,4 +55,20 @@ export async function fetchShopeeProducts(page=1,limit=20,keyword?:string,itemId
   if(!res.ok) throw new Error(`Shopee HTTP ${res.status}`);
   if(json?.errors?.length) throw new Error(`Shopee API${json.errors[0]?.extensions?.code||json.errors[0]?.code?` [${json.errors[0]?.extensions?.code||json.errors[0]?.code}]`:""}: ${json.errors[0]?.message || "Erro na consulta"}`);
   return json?.data?.productOfferV2 ?? {nodes:[],pageInfo:null};
+}
+
+export function shortLinkPayload(originUrl:string,subId:string){
+  if(!productIdentity(originUrl))throw Error('Use o endereço completo do produto Shopee.');
+  if(!/^[A-Za-z0-9_]{1,50}$/.test(subId))throw Error('Sub ID inválido.');
+  return {query:`mutation { generateShortLink(input: {originUrl: ${JSON.stringify(originUrl)}, subIds: [${JSON.stringify(subId)}]}) { shortLink } }`};
+}
+export async function generateShopeeLink(originUrl:string,subId:string){
+  const body=JSON.stringify(shortLinkPayload(originUrl,subId));
+  const res=await fetch(ENDPOINT,{method:'POST',headers:signedHeaders(body),body,cache:'no-store',signal:AbortSignal.timeout(15000)});
+  const json=await res.json().catch(()=>({}));
+  // Never fall back to the original product URL on a conversion failure.
+  if(!res.ok||json?.errors?.length)throw Error('Shopee não confirmou a conversão do link. Confira a disponibilidade e as permissões da API.');
+  const link=String(json?.data?.generateShortLink?.shortLink||'');
+  if(!isShopeeUrl(link)||link===originUrl)throw Error('Shopee retornou um link inválido.');
+  return link;
 }

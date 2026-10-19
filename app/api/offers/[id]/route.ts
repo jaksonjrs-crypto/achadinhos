@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { queueManualOffers } from "@/lib/publication-queue";
 import { productSafetyCheck } from "@/lib/product-safety";
 
+import {verifiedShopeeLink,ensureAffiliateRegistry} from '@/lib/affiliate-registry';
+
 export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>}){
   const {id}=await params;
   const offerId=Number(id);
@@ -13,7 +15,7 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
   if(action==="edit"){
     const title=String(form.get("title")||"").trim(), category=String(form.get("category")||"Casa").trim();
     const marketplace=String(form.get("marketplace")||"Outro").trim(), image=String(form.get("image_url")||"").trim();
-    const affiliate=String(form.get("affiliate_url")||"").trim();
+    let affiliate=String(form.get("affiliate_url")||"").trim();
     const price=Number(String(form.get("price")||"").replace(",",".")), originalRaw=String(form.get("original_price")||"").replace(",",".");
     const original=originalRaw?Number(originalRaw):null;
     const externalId=String(form.get("external_id")||"").trim()||null;
@@ -21,7 +23,16 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
     if(!title||!affiliate||!Number.isFinite(price)||price<=0)return NextResponse.json({error:"Dados inválidos"},{status:400});
     if(!productSafetyCheck(title,category).allowed)return NextResponse.json({error:"Categoria de produto não permitida neste projeto."},{status:400});
     for(const [label,value] of [["Link",affiliate],["Imagem",image]] as const){if(value){try{const u=new URL(value);if(!["http:","https:"].includes(u.protocol))throw 0}catch{return NextResponse.json({error:`${label} inválido`},{status:400})}}}
-    await sql`UPDATE offers SET title=${title},category=${category},marketplace=${marketplace},image_url=${image||null},price=${price},original_price=${original},affiliate_url=${affiliate},external_id=${externalId},sync_status=${externalId?"linked":"unlinked"},updated_at=NOW() WHERE id=${offerId}`;
+    if(marketplace.toLowerCase()==='shopee'){
+      try{affiliate=(await verifiedShopeeLink(externalId||'',affiliate)).link}
+      catch(e:any){return NextResponse.json({error:e.message||'Não foi possível validar o link Shopee.'},{status:400})}
+    }
+    await ensureAffiliateRegistry();
+    await sql`WITH previous AS (SELECT id,affiliate_url FROM offers WHERE id=${offerId} FOR UPDATE), changed AS (
+      UPDATE offers o SET title=${title},category=${category},marketplace=${marketplace},image_url=${image||null},price=${price},original_price=${original},affiliate_url=${affiliate},external_id=${externalId},sync_status=${externalId?"linked":"unlinked"},updated_at=NOW()
+      FROM previous p WHERE o.id=p.id RETURNING o.id,p.affiliate_url AS old_url
+    ) INSERT INTO affiliate_link_audit(offer_id,old_url,new_url,external_id,status,message)
+      SELECT id,old_url,${affiliate},${externalId},'manual','Correção manual; link anterior preservado no histórico.' FROM changed WHERE old_url<>${affiliate}`;
   }
   else if(action==="publish"){
     const rows=await sql`SELECT title,category,image_url,price,affiliate_url FROM offers WHERE id=${offerId} LIMIT 1`;

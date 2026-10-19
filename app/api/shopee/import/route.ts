@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {importShopeeCandidates} from "@/lib/shopee-import";
 
+export const maxDuration=300;
 export const dynamic="force-dynamic";
 
 export async function POST(req:Request){

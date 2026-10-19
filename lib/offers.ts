@@ -38,6 +38,6 @@ export async function listPublishedOffers():Promise<Offer[]>{
 export async function listAllOffers():Promise<Offer[]>{
   const sql=db();
   const rows=await sql`SELECT id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status
-    FROM offers ORDER BY updated_at DESC LIMIT 200`;
+    FROM offers ORDER BY updated_at DESC`;
   return rows.map(map) as Offer[];
 }
