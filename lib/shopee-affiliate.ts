@@ -67,7 +67,12 @@ export async function generateShopeeLink(originUrl:string,subId:string){
   const res=await fetch(ENDPOINT,{method:'POST',headers:signedHeaders(body),body,cache:'no-store',signal:AbortSignal.timeout(15000)});
   const json=await res.json().catch(()=>({}));
   // Never fall back to the original product URL on a conversion failure.
-  if(!res.ok||json?.errors?.length)throw Error('Shopee não confirmou a conversão do link. Confira a disponibilidade e as permissões da API.');
+  if(!res.ok||json?.errors?.length){
+    const error=json?.errors?.[0];
+    let detail=String(error?.message||'Resposta não confirmada').slice(0,400);
+    for(const value of [process.env.SHOPEE_APP_ID,process.env.SHOPEE_SECRET])if(value)detail=detail.split(value).join('[oculto]');
+    throw Error(`Shopee conversão HTTP ${res.status} [${String(error?.extensions?.code||error?.code||'sem código').slice(0,30)}]: ${detail}`);
+  }
   const link=String(json?.data?.generateShortLink?.shortLink||'');
   if(!isShopeeUrl(link)||link===originUrl)throw Error('Shopee retornou um link inválido.');
   return link;

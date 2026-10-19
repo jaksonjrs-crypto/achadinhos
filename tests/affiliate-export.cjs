@@ -65,4 +65,14 @@ async function manychatTests(){
   assert(data.link.includes('/go/11?channel=instagram&utm_source=instagram&utm_medium=manychat'));
   await assert.rejects(mc.prepareManychat(11,'threads','https://example.test',true));
 }
-(async()=>{await conversionTests();await repairTests();await manychatTests();console.log('PASS: identity, conversion failure, numeric IDs, resumable repair, concurrent edit protection, filters, XLSX structure/red styling, CSV injection protection, and honest Manychat setup state');})().catch(e=>{console.error(e);process.exitCode=1});
+async function manualTests(){
+  let calls=0;
+  const manual=load('lib/manual-affiliate.ts',{'./affiliate-registry':{ensureAffiliateRegistry:async()=>async()=>[]},'./shopee-affiliate':{fetchShopeeProducts:async()=>{calls++;throw Error('API unavailable')}}});
+  const url='https://s.shopee.com.br/4B0qWdj8nM';
+  for(const bypass of [false,true]){const r=await manual.acceptManualLink('18698147487',url,'VITRINE_ESCOVA_9EM1_16PORCENTO',bypass);assert.equal(r.link,url);assert.equal(r.status,'pending');}
+  assert.equal(calls,1);
+  await assert.rejects(manual.acceptManualLink('12','https://evil.test/x','',true));
+  const registry=load('lib/affiliate-registry.ts',{'./db':{db:()=>async(strings)=>strings.join('').includes('SELECT id,title')?[{id:111,status:'published',marketplace:'Shopee',affiliate_url:url,external_id:'18698147487'}]:[]},'./shopee-affiliate':{fetchShopeeProducts:async()=>{throw Error('must not query')},generateShopeeLink:async()=>{throw Error('must not convert')}}});
+  assert.equal((await registry.ensureOfferAffiliate(111)).affiliate_url,url);
+}
+(async()=>{await manualTests();await conversionTests();await repairTests();await manychatTests();console.log('PASS: identity, conversion failure, numeric IDs, resumable repair, concurrent edit protection, filters, XLSX structure/red styling, CSV injection protection, and honest Manychat setup state');})().catch(e=>{console.error(e);process.exitCode=1});

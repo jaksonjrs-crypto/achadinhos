@@ -1,8 +1,10 @@
+import {ensureAffiliateRegistry} from "./affiliate-registry";
 import { db } from "./db";
 
 export type Offer = {
   id:number; title:string; category:string; marketplace:string; image_url:string|null;
   price:number; original_price:number|null; affiliate_url:string; status:string;
+  affiliate_status?:string|null; affiliate_sub_id?:string|null; affiliate_note?:string|null;
   featured:boolean; created_at:string; updated_at?:string; external_id?:string|null; product_id?:number|null;
   opportunity_score?:number|null; last_synced_at?:string|null; sync_status?:string;
 };
@@ -36,8 +38,8 @@ export async function listPublishedOffers():Promise<Offer[]>{
   });
 }
 export async function listAllOffers():Promise<Offer[]>{
-  const sql=db();
-  const rows=await sql`SELECT id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status
+  const sql=await ensureAffiliateRegistry();
+  const rows=await sql`SELECT affiliate_status,affiliate_sub_id,affiliate_note,id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status
     FROM offers ORDER BY updated_at DESC`;
   return rows.map(map) as Offer[];
 }

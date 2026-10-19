@@ -31,7 +31,7 @@ export async function prepareManychat(offerId:number,channel:string,origin:strin
     fieldSynced=true;
   }
   return {offerId,channel,keyword:manychatKeyword(String(offer.title)),link,fieldName,fieldSynced,
-    configured:Boolean(process.env.MANYCHAT_API_TOKEN?.trim()),validated:sync,
+    configured:Boolean(process.env.MANYCHAT_API_TOKEN?.trim()),validated:false,
     message:`🔥 Achado de hoje!\n${String(offer.title).slice(0,100)}\nConfira a promoção no botão abaixo.\n\n*Promoção sujeita a alteração a qualquer momento.`,
     setupRequired:true,
     note:fieldSynced?'Campo de link sincronizado. Vincule ou confira o botão e o gatilho na automação Manychat.':'Configure o gatilho e use este link no botão da automação Manychat. A criação de gatilhos não está disponível nesta integração de API.'};

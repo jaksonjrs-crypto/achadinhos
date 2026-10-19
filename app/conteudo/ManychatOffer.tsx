@@ -7,7 +7,7 @@ export default function ManychatOffer({id,channel}:{id:number;channel:'instagram
     catch(e:any){setError(e.message)}finally{setBusy(false)}
   }
   return <section className="noticeBox"><b>Resposta no Manychat · {channel==='facebook'?'Facebook':'Instagram'}</b>
-    <p>Valide o link e prepare a resposta para o produto. A palavra-chave e o botão precisam estar vinculados no Manychat. Threads não está incluído.</p>
+    <p>Use o link salvo e prepare a resposta para o produto. A palavra-chave e o botão precisam estar vinculados no Manychat. Threads não está incluído.</p>
     <button type="button" onClick={prepare} disabled={busy}>{busy?'Preparando…':'Preparar resposta Manychat'}</button>
     {error&&<p role="alert">{error}</p>}{result&&<div role="status"><p>{result.note}</p>
       <p>Palavra-chave sugerida: <b>{result.keyword}</b></p><p>Campo do botão: <code>{result.fieldName}</code></p>

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { db } from "@/lib/db";
 export async function GET(req:NextRequest,{params}:{params:Promise<{id:string}>}){
   const {id}=await params;const n=Number(id);
@@ -11,25 +11,11 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{id:string}>}
   const channel=allowedChannels.has(requested)?requested:'vitrine';
   const referrer=req.headers.get('referer')?.slice(0,1000)||null;
   const userAgent=req.headers.get('user-agent')?.slice(0,500)||null;
-  try{
-    await sql`ALTER TABLE offer_clicks ADD COLUMN IF NOT EXISTS channel TEXT`;
-    await sql`ALTER TABLE offer_clicks ADD COLUMN IF NOT EXISTS referrer TEXT`;
-    await sql`ALTER TABLE offer_clicks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ`;
-    await sql`UPDATE offer_clicks SET channel='vitrine' WHERE channel IS NULL`;
-    await sql`UPDATE offer_clicks SET created_at=NOW() WHERE created_at IS NULL`;
-  }catch(schemaError){
-    console.warn("[click-tracking] Compatibilidade de schema",{schemaError});
-  }
-  try{
-    await sql`INSERT INTO offer_clicks(offer_id,channel,referrer,user_agent,created_at) VALUES(${n},${channel},${referrer},${userAgent},NOW())`;
-  }catch(modernError){
-    try{await sql`INSERT INTO offer_clicks(offer_id,source,user_agent) VALUES(${n},${channel},${userAgent})`;}
-    catch(legacyError){console.error("[click-tracking] Falha ao registrar clique",{offerId:n,channel,modernError,legacyError});}
-  }
+  after(async()=>{
+    try{await sql`INSERT INTO offer_clicks(offer_id,channel,referrer,user_agent,created_at) VALUES(${n},${channel},${referrer},${userAgent},NOW())`;}
+    catch{try{await sql`INSERT INTO offer_clicks(offer_id,source,user_agent) VALUES(${n},${channel},${userAgent})`;}catch{console.error('[click-tracking] Falha ao registrar clique',{offerId:n,channel});}}
+  });
   const destination=new URL(String(rows[0].affiliate_url));
-  if(req.nextUrl.searchParams.get('utm_medium')==='manychat'&&['instagram','facebook'].includes(channel)){
-    destination.searchParams.set('utm_source',channel);destination.searchParams.set('utm_medium','manychat');
-  }
   const response=NextResponse.redirect(destination,302);
   response.headers.set("Cache-Control","no-store, max-age=0");
   return response;

@@ -35,7 +35,7 @@ export async function autopilotCandidate(candidateId:number):Promise<AutopilotRe
  let offerId:number; let created=false;
  if(existing.length){
    offerId=Number((existing[0] as any).id);
-   await sql`UPDATE offers SET title=${c.title},category=${c.category||'Casa'},image_url=${c.image_url},price=${Number(c.price)},original_price=${c.original_price==null?null:Number(c.original_price)},affiliate_url=${c.product_url},status='published',external_id=COALESCE(external_id,${c.external_id||null}),product_id=COALESCE(product_id,${productId}),opportunity_score=${Number(c.score)},sync_status=${c.external_id?'linked':'unlinked'},updated_at=NOW() WHERE id=${offerId}`;
+   await sql`UPDATE offers SET title=${c.title},category=${c.category||'Casa'},image_url=${c.image_url},price=${Number(c.price)},original_price=${c.original_price==null?null:Number(c.original_price)},affiliate_url=CASE WHEN affiliate_status='pending' THEN affiliate_url ELSE ${c.product_url} END,status='published',external_id=COALESCE(external_id,${c.external_id||null}),product_id=COALESCE(product_id,${productId}),opportunity_score=${Number(c.score)},sync_status=${c.external_id?'linked':'unlinked'},updated_at=NOW() WHERE id=${offerId}`;
  }else{
    const ins=await sql`INSERT INTO offers(title,category,marketplace,image_url,price,original_price,affiliate_url,status,external_id,product_id,opportunity_score,sync_status,last_synced_at)
     VALUES(${c.title},${c.category||'Casa'},${c.marketplace},${c.image_url},${Number(c.price)},${c.original_price==null?null:Number(c.original_price)},${c.product_url},'published',${c.external_id||null},${productId},${Number(c.score)},${c.external_id?'linked':'unlinked'},${c.external_id?new Date():null}) RETURNING id`;

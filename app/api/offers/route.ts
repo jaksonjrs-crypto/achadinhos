@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { queueManualOffers } from "@/lib/publication-queue";
 import { productSafetyCheck } from "@/lib/product-safety";
 
-import {verifiedShopeeLink} from '@/lib/affiliate-registry';
+import {ensureAffiliateRegistry} from '@/lib/affiliate-registry';
+import {acceptManualLink} from '@/lib/manual-affiliate';
 
 export async function POST(req:NextRequest){
   const f=await req.formData();
@@ -27,13 +28,14 @@ export async function POST(req:NextRequest){
   if(status==="published"&&!image)return NextResponse.json({error:"Inclua uma imagem antes de publicar."},{status:400});
 
   const externalId=String(f.get('external_id')||'').trim()||null;
+  let affiliateStatus:string|null=null,savedNote='',subId=String(f.get('sub_id')||'').trim();
   if(marketplace.toLowerCase()==='shopee'){
-    try{affiliate=(await verifiedShopeeLink(externalId||'',affiliate)).link}
+    try{const accepted=await acceptManualLink(externalId||'',affiliate,subId,f.get('manual_link')==='on');affiliateStatus=accepted.status;savedNote=accepted.note;subId=accepted.subId;}
     catch(e:any){return NextResponse.json({error:e.message||'Não foi possível validar o link Shopee.'},{status:400})}
   }
-  const sql=db();
-  const inserted=await sql`INSERT INTO offers(title,category,marketplace,image_url,price,original_price,affiliate_url,status,external_id)
-    VALUES(${title},${category},${marketplace},${image||null},${price},${original},${affiliate},${status},${externalId}) RETURNING id`;
+  const sql=await ensureAffiliateRegistry();
+  const inserted=await sql`INSERT INTO offers(title,category,marketplace,image_url,price,original_price,affiliate_url,status,external_id,affiliate_status,affiliate_sub_id,affiliate_note)
+    VALUES(${title},${category},${marketplace},${image||null},${price},${original},${affiliate},${status},${externalId},${affiliateStatus},${subId},${savedNote||null}) RETURNING id`;
   if(status==="published"){try{await queueManualOffers(Number(inserted[0].id))}catch{console.error("Oferta salva; inclusão na fila pendente.")}}
-  return NextResponse.redirect(new URL("/central",req.url),303);
+  return NextResponse.redirect(new URL(savedNote?`/central?saved=${encodeURIComponent(savedNote)}`:'/central',req.url),303);
 }
