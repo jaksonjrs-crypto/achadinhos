@@ -478,3 +478,13 @@
 @media(max-width:1050px){.store .offerGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.store .offerGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.store .offerBody{padding:9px}.store .offerBody h3{font-size:12px;min-height:33px}.store .offerBody strong{font-size:18px}.catalogToolbar form{width:100%}.catalogToolbar select{flex:1;min-width:0}.store .catalogPagination{gap:5px}.catalogPagination a,.catalogPagination>span{padding:10px 8px;font-size:11px}}
 @media(prefers-reduced-motion:reduce){.store .offerCard{transition:none}.store .offerCard:hover{transform:none}}
+
+/* Campaign editor: explicit contrast and a full-width editable destination. */
+#campaign-links .offerForm{grid-template-columns:minmax(0,1fr);background:#fff;color:#172033;padding:16px;gap:12px}
+#campaign-links .offerForm h3,#campaign-links .offerForm p,#campaign-links .offerForm label{color:#172033;margin:0}
+#campaign-links .offerForm a{color:#075985;text-decoration:underline;overflow-wrap:anywhere}
+#campaign-links .offerForm label{display:grid;gap:8px;font-weight:700;min-width:0}
+#campaign-links .offerForm input[type=url]{width:100%;min-width:0;background:#fff;color:#172033;-webkit-text-fill-color:#172033;caret-color:#172033;font-size:16px;border:1px solid #64748b}
+#campaign-links .offerForm input[type=url]:focus-visible{outline:3px solid #087b7c;outline-offset:2px}
+#campaign-links .offerForm small{color:#475569;line-height:1.5}
+#campaign-links .offerForm button{background:#087b7c;color:#fff;justify-self:start;min-height:44px}

@@ -63,6 +63,7 @@ export default async function Central({searchParams}:{searchParams:Promise<Recor
         <h3>{c.title}</h3><input type="hidden" name="slug" value={c.slug}/><input type="hidden" name="previous" value={c.destination}/>
         <p>Link permanente: <a href={`/go/${c.slug}?channel=instagram`} target="_blank" rel="noopener noreferrer">https://www.minhavitrinedeachados.com.br/go/{c.slug}?channel=instagram</a></p>
         <label>Link de destino ROSA<input type="url" name="destination" required defaultValue={c.destination}/></label>
+        <small>Edite o campo acima e clique em Salvar link ROSA. O endereço permanente usado no ManyChat continua igual; apenas o destino na Shopee muda.</small>
         <small>Link manual: a comissão não foi confirmada pela API. Esta campanha não entra nos cliques por oferta.</small>
         <button type="submit">Salvar link ROSA</button>
       </form>)}
