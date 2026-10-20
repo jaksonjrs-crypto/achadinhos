@@ -57,12 +57,19 @@ export default async function Central({searchParams}:{searchParams:Promise<Recor
     <div className="contentWorkflowActions"><a className="button" href={`/api/offers/export?${exportParams}&format=xlsx`}>Exportar Excel (.xlsx)</a><ImportOffers format="xlsx"/><a className="button" href={`/api/offers/export?${exportParams}&format=csv`}>Exportar para Google Sheets (CSV)</a><ImportOffers format="csv"/></div>
     <p className="muted">Exportação respeita os filtros. Vermelho no Excel indica link citado no chamado ainda sem conversão confirmada. No Google Sheets, importe o CSV com separador vírgula.</p>
     <details className="newOfferBox" id="campaign-links"><summary>Links de campanhas — ROSA</summary>
-      <p>Troque o destino aqui para atualizar o link usado no ManyChat. Links de campanhas são independentes das ofertas numéricas e da importação Excel/CSV.</p>
+      <p>Troque o destino aqui para atualizar o link usado no ManyChat. Ao preencher os dados completos, a oferta Shopee é criada como rascunho ou atualizada pelo ID do produto. Depois, publique o lote pronto.</p>
       {campaigns.length===0&&<p role="alert">Não foi possível carregar os links de campanhas. Recarregue a página.</p>}
       {campaigns.map(c=><form key={c.slug} className="offerForm" method="post" action="/api/offers/campaign-links">
-        <h3>{c.title}</h3><input type="hidden" name="slug" value={c.slug}/><input type="hidden" name="previous" value={c.destination}/>
+        <h3>{c.title}</h3><input type="hidden" name="slug" value={c.slug}/><input type="hidden" name="previous" value={c.destination}/><input type="hidden" name="revision" value={c.revision}/>
         <p>Link permanente: <a href={`/go/${c.slug}?channel=instagram`} target="_blank" rel="noopener noreferrer">https://www.minhavitrinedeachados.com.br/go/{c.slug}?channel=instagram</a></p>
         <label>Link de destino ROSA<input type="url" name="destination" required defaultValue={c.destination}/></label>
+        <label>Nome completo<input name="full_name" defaultValue={c.full_name||''} maxLength={300}/></label>
+        <label>Código do cadastro<input name="product_code" defaultValue={c.product_code||''} maxLength={80}/></label>
+        <label>ID do produto na Shopee<input name="external_id" inputMode="numeric" defaultValue={c.external_id||''}/></label>
+        <label>Imagem principal<input type="url" name="image_url" defaultValue={c.image_url||''}/></label>
+        <label>Preço atual (R$)<input type="number" name="price" min="0.01" step="0.01" defaultValue={c.price??''}/></label>
+        <label>Preço anterior (R$)<input type="number" name="original_price" min="0" step="0.01" defaultValue={c.original_price??''}/></label>
+        <small>Preencha todos os dados para cadastrar a oferta. Código do cadastro não substitui o ID numérico da Shopee.</small>
         <small>Edite o campo acima e clique em Salvar link ROSA. O endereço permanente usado no ManyChat continua igual; apenas o destino na Shopee muda.</small>
         <small>Link manual: a comissão não foi confirmada pela API. Esta campanha não entra nos cliques por oferta.</small>
         <button type="submit">Salvar link ROSA</button>

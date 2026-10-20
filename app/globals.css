@@ -484,7 +484,7 @@
 #campaign-links .offerForm h3,#campaign-links .offerForm p,#campaign-links .offerForm label{color:#172033;margin:0}
 #campaign-links .offerForm a{color:#075985;text-decoration:underline;overflow-wrap:anywhere}
 #campaign-links .offerForm label{display:grid;gap:8px;font-weight:700;min-width:0}
-#campaign-links .offerForm input[type=url]{width:100%;min-width:0;background:#fff;color:#172033;-webkit-text-fill-color:#172033;caret-color:#172033;font-size:16px;border:1px solid #64748b}
-#campaign-links .offerForm input[type=url]:focus-visible{outline:3px solid #087b7c;outline-offset:2px}
+#campaign-links .offerForm input:not([type=hidden]){width:100%;min-width:0;background:#fff;color:#172033;-webkit-text-fill-color:#172033;caret-color:#172033;font-size:16px;border:1px solid #64748b}
+#campaign-links .offerForm input:not([type=hidden]):focus-visible{outline:3px solid #087b7c;outline-offset:2px}
 #campaign-links .offerForm small{color:#475569;line-height:1.5}
 #campaign-links .offerForm button{background:#087b7c;color:#fff;justify-self:start;min-height:44px}

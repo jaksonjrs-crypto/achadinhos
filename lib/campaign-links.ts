@@ -10,5 +10,6 @@ export async function campaignLinks(){
   await sql`CREATE TABLE IF NOT EXISTS campaign_links(slug TEXT PRIMARY KEY,title TEXT NOT NULL,destination TEXT NOT NULL,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
   await sql`CREATE TABLE IF NOT EXISTS campaign_link_audit(id BIGSERIAL PRIMARY KEY,slug TEXT NOT NULL,old_url TEXT NOT NULL,new_url TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
   await sql`INSERT INTO campaign_links(slug,title,destination) VALUES('rosa','ROSA — liquidificador 380 ml','https://s.shopee.com.br/AKbTjSJMYj') ON CONFLICT(slug) DO NOTHING`;
-  return sql`SELECT slug,title,destination FROM campaign_links ORDER BY slug`;
+  await sql`ALTER TABLE campaign_links ADD COLUMN IF NOT EXISTS full_name TEXT, ADD COLUMN IF NOT EXISTS product_code TEXT, ADD COLUMN IF NOT EXISTS image_url TEXT, ADD COLUMN IF NOT EXISTS price NUMERIC, ADD COLUMN IF NOT EXISTS original_price NUMERIC, ADD COLUMN IF NOT EXISTS external_id TEXT`;
+  return sql`SELECT *,updated_at::text AS revision FROM campaign_links ORDER BY slug`;
 }
