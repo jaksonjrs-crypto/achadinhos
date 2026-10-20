@@ -1,3 +1,4 @@
+import {campaignLinks} from '@/lib/campaign-links';
 import ImportOffers from './ImportOffers';
 import RepairLinks from './RepairLinks';
 import {filterOffers} from '@/lib/offer-filters';
@@ -15,6 +16,7 @@ export default async function Central({searchParams}:{searchParams:Promise<Recor
   const params=await searchParams;
   let offers:any[]=[];try{offers=await listAllOffers()}catch{}
   const all=offers;
+  let campaigns:any[]=[];try{campaigns=await campaignLinks()}catch{}
   const q=String(params.q||"").trim().toLowerCase();
   const status=String(params.status||"all");
   const marketplace=String(params.marketplace||"all");
@@ -54,6 +56,17 @@ export default async function Central({searchParams}:{searchParams:Promise<Recor
     {params.saved&&<p role="status">{params.saved}</p>}
     <div className="contentWorkflowActions"><a className="button" href={`/api/offers/export?${exportParams}&format=xlsx`}>Exportar Excel (.xlsx)</a><ImportOffers format="xlsx"/><a className="button" href={`/api/offers/export?${exportParams}&format=csv`}>Exportar para Google Sheets (CSV)</a><ImportOffers format="csv"/></div>
     <p className="muted">Exportação respeita os filtros. Vermelho no Excel indica link citado no chamado ainda sem conversão confirmada. No Google Sheets, importe o CSV com separador vírgula.</p>
+    <details className="newOfferBox" id="campaign-links"><summary>Links de campanhas — ROSA</summary>
+      <p>Troque o destino aqui para atualizar o link usado no ManyChat. Links de campanhas são independentes das ofertas numéricas e da importação Excel/CSV.</p>
+      {campaigns.length===0&&<p role="alert">Não foi possível carregar os links de campanhas. Recarregue a página.</p>}
+      {campaigns.map(c=><form key={c.slug} className="offerForm" method="post" action="/api/offers/campaign-links">
+        <h3>{c.title}</h3><input type="hidden" name="slug" value={c.slug}/><input type="hidden" name="previous" value={c.destination}/>
+        <p>Link permanente: <a href={`/go/${c.slug}?channel=instagram`} target="_blank" rel="noopener noreferrer">https://www.minhavitrinedeachados.com.br/go/{c.slug}?channel=instagram</a></p>
+        <label>Link de destino ROSA<input type="url" name="destination" required defaultValue={c.destination}/></label>
+        <small>Link manual: a comissão não foi confirmada pela API. Esta campanha não entra nos cliques por oferta.</small>
+        <button type="submit">Salvar link ROSA</button>
+      </form>)}
+    </details>
     <RepairLinks/>
     <div className="centralActionBar"><SyncCatalogButton/><BatchPublishButton /></div>
     <div className="contentWorkflowActions"><a className="button" href="/divulgacao">Abrir fila de divulgação</a></div>
