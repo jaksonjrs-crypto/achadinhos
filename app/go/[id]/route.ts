@@ -1,4 +1,4 @@
-import {countClick,ADMIN_DEVICE_COOKIE} from '@/lib/click-policy';
+import {countClick,ADMIN_DEVICE_COOKIE,CHANNELS} from '@/lib/click-policy';
 import {cachedChannelLink,ensureChannelLink} from '@/lib/channel-links';
 import { NextRequest, NextResponse, after } from "next/server";
 import { db } from "@/lib/db";
@@ -9,7 +9,7 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{id:string}>}
   const rows=await sql`SELECT affiliate_url,marketplace,external_id FROM offers WHERE id=${n} AND status='published' LIMIT 1`;
   if(!rows[0])return new NextResponse('Oferta indisponível',{status:404});
   const requested=(req.nextUrl.searchParams.get('channel')||req.nextUrl.searchParams.get('src')||req.cookies.get('vitrine_channel')?.value||'vitrine').slice(0,100);
-  const allowedChannels=new Set(['vitrine','instagram','facebook','whatsapp','telegram','pinterest','tiktok']);
+  const allowedChannels=new Set<string>(CHANNELS);
   const channel=allowedChannels.has(requested)?requested:'vitrine';
   const referrer=req.headers.get('referer')?.slice(0,1000)||null;
   const userAgent=req.headers.get('user-agent')?.slice(0,500)||null;

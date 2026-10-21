@@ -14,7 +14,8 @@
     "test:affiliate-export": "node tests/affiliate-export.cjs",
     "test:facebook": "node tests/facebook-publisher.cjs",
     "test:release-3510": "node tests/release-3510.cjs",
-    "test:release-360": "node tests/release-360.cjs"
+    "test:release-360": "node tests/release-360.cjs",
+    "test:home-catalog": "node tests/home-catalog.cjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

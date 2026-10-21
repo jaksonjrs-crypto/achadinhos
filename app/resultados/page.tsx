@@ -5,7 +5,7 @@ import SyncCommissionsButton from "./SyncCommissionsButton";
 export const dynamic="force-dynamic";
 export const revalidate=0;
 
-const channelLabel=(v:string)=>({facebook:"Facebook",instagram:"Instagram",whatsapp:"WhatsApp",telegram:"Telegram",pinterest:"Pinterest",vitrine:"Vitrine"}[v]||v);
+const channelLabel=(v:string)=>({facebook:"Facebook",instagram:"Instagram",stories:"Stories",whatsapp:"WhatsApp",telegram:"Telegram",pinterest:"Pinterest",vitrine:"Vitrine"}[v]||v);
 const dayLabel=(v:any)=>new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"2-digit",timeZone:"UTC"}).format(new Date(v));
 const shortName=(v:string)=>{const clean=String(v||"").replace(/\s+/g," ").trim(); const words=clean.split(" "); return words.length>7?`${words.slice(0,7).join(" ")}…`:clean};
 
@@ -92,8 +92,8 @@ export default async function Resultados(){
 
     <section className="analyticsCard topOffers2">
       <h2>Ofertas mais clicadas</h2>
-      {data.top.length?<div className="tableScroll"><table className="adminTable"><thead><tr><th>Produto</th><th>Marketplace</th><th>Total</th><th>Facebook</th><th>Instagram</th><th>WhatsApp</th><th>Telegram</th><th>Pinterest</th><th>Vitrine</th></tr></thead><tbody>
-        {data.top.map((o:any)=><tr key={o.id}><td><div className="analyticsProduct">{o.image_url?<img src={o.image_url} alt="" loading="lazy"/>:<span className="analyticsProductPlaceholder">VA</span>}<span title={o.title}>{shortName(o.title)}</span></div></td><td>{o.marketplace}</td><td><strong>{o.clicks}</strong></td><td>{o.facebook??0}</td><td>{o.instagram}</td><td>{o.whatsapp}</td><td>{o.telegram}</td><td>{o.pinterest}</td><td>{o.vitrine}</td></tr>)}
+      {data.top.length?<div className="tableScroll"><table className="adminTable"><thead><tr><th>Produto</th><th>Marketplace</th><th>Total</th><th>Facebook</th><th>Instagram</th><th>Stories</th><th>WhatsApp</th><th>Telegram</th><th>Pinterest</th><th>Vitrine</th></tr></thead><tbody>
+        {data.top.map((o:any)=><tr key={o.id}><td><div className="analyticsProduct">{o.image_url?<img src={o.image_url} alt="" loading="lazy"/>:<span className="analyticsProductPlaceholder">VA</span>}<span title={o.title}>{shortName(o.title)}</span></div></td><td>{o.marketplace}</td><td><strong>{o.clicks}</strong></td><td>{o.facebook??0}</td><td>{o.instagram}</td><td>{o.stories??0}</td><td>{o.whatsapp}</td><td>{o.telegram}</td><td>{o.pinterest}</td><td>{o.vitrine}</td></tr>)}
       </tbody></table></div>:<p className="muted">Nenhuma oferta cadastrada.</p>}
       <p className="analyticsNote">Os cliques indicam interesse no link. Não representam, por si só, compras ou comissões confirmadas.</p>
     </section>

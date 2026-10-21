@@ -10,7 +10,7 @@ export default async function Conteudo({searchParams}:{searchParams:Promise<Reco
   let offers:any[]=[];try{offers=await listPublishedOffers()}catch{}
   const requested=Number(params.oferta||0);
   const selected=offers.find(o=>Number(o.id)===requested)||offers[0];
-  const allowedChannels=["instagram","facebook","whatsapp","telegram","pinterest","tiktok","vitrine"] as const;
+  const allowedChannels=["instagram","stories","facebook","whatsapp","telegram","pinterest","tiktok","vitrine"] as const;
   const requestedChannel=allowedChannels.includes(params.canal as any)?params.canal as typeof allowedChannels[number]:"instagram";
 
   return <main className="panel">

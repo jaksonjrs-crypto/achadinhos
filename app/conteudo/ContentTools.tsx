@@ -2,16 +2,16 @@
 import { useMemo, useState } from "react";
 import ManychatOffer from "./ManychatOffer";
 
-type Channel="instagram"|"facebook"|"whatsapp"|"telegram"|"pinterest"|"tiktok"|"vitrine";
+type Channel="instagram"|"stories"|"facebook"|"whatsapp"|"telegram"|"pinterest"|"tiktok"|"vitrine";
 type Props={id:number;title:string;priceLabel:string;marketplace:string;initialChannel?:Channel};
-const channels=["instagram","facebook","whatsapp","telegram","pinterest","tiktok","vitrine"] as const;
+const channels=["instagram","stories","facebook","whatsapp","telegram","pinterest","tiktok","vitrine"] as const;
 
 export default function ContentTools({id,title,priceLabel,marketplace,initialChannel="instagram"}:Props){
   const [channel,setChannel]=useState<Channel>(initialChannel);
   const [copied,setCopied]=useState("");
   const [style,setStyle]=useState<"direto"|"beneficio"|"urgencia">("direto");
   const origin=typeof window!=="undefined"?window.location.origin:"";
-  const channelCode:Record<Channel,string>={instagram:"i",facebook:"f",whatsapp:"w",telegram:"t",pinterest:"p",tiktok:"k",vitrine:"v"};
+  const channelCode:Record<Channel,string>={instagram:"i",stories:"s",facebook:"f",whatsapp:"w",telegram:"t",pinterest:"p",tiktok:"k",vitrine:"v"};
   const linkFor=(target:Channel)=>`${origin}/o/${id}?c=${channelCode[target]}`;
   const customTrackedUrl=linkFor(channel);
   const shortTitle=title.length>62?`${title.slice(0,61).trim()}…`:title;
@@ -46,7 +46,7 @@ export default function ContentTools({id,title,priceLabel,marketplace,initialCha
     }
   }
   const [contentType,setContentType]=useState<"instagram"|"facebook"|"whatsapp"|"telegram"|"pinterest"|"tiktok"|"roteiro">(
-    initialChannel==="vitrine"?"instagram":initialChannel
+    initialChannel==="vitrine"||initialChannel==="stories"?"instagram":initialChannel
   );
   const contentLabels={instagram:"Instagram / Threads",facebook:"Facebook",whatsapp:"WhatsApp",telegram:"Telegram",pinterest:"Pinterest",tiktok:"TikTok",roteiro:"Roteiro curto sem rosto"} as const;
   const selectedText=texts[contentType];

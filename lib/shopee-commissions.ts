@@ -7,7 +7,8 @@ import {fetchConversionPage} from './shopee-affiliate';
 import {BOT_PATTERN} from './click-policy';
 
 export const CHANNEL_SUB_PREFIX='VG';
-const KNOWN_CHANNELS=['vitrine','instagram','facebook','whatsapp','telegram','pinterest','tiktok'];
+import {CHANNELS} from './click-policy';
+const KNOWN_CHANNELS:string[]=[...CHANNELS];
 
 export type ConversionItem={conversion_id:string;order_id:string;item_id:string;item_name:string;item_price:number;qty:number;
   commission:number;order_status:string;purchase_time:string;click_time:string|null;utm_content:string};
