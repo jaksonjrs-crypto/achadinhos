@@ -1,5 +1,7 @@
 import { APP_VERSION } from "@/lib/version";
 import { getDashboardStats } from "@/lib/analytics";
+import { commissionStats } from "@/lib/shopee-commissions";
+import SyncCommissionsButton from "./SyncCommissionsButton";
 export const dynamic="force-dynamic";
 export const revalidate=0;
 
@@ -10,6 +12,11 @@ const shortName=(v:string)=>{const clean=String(v||"").replace(/\s+/g," ").trim(
 export default async function Resultados(){
   let data:any={summary:{total:0,published:0,drafts:0,expired:0,clicks:0,clicked_offers:0},channels:[],top:[],recent:[],periods:{last7:0,prev7:0,last30:0},apps:[]};
   try{data=await getDashboardStats()}catch{}
+  let sales:any=null;try{sales=await commissionStats(30)}catch{}
+  const brl=(v:any)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v||0));
+  const when=(v:any)=>v?new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"America/Sao_Paulo"}).format(new Date(v)):"";
+  const statusLabel=(v:string)=>({COMPLETED:"Concluído",PENDING:"Pendente",UNPAID:"Aguardando pagamento",CANCELLED:"Cancelado"}[v]||v);
+  const salesChannel=(v:string)=>v==="sem_canal"?"Sem canal identificado":channelLabel(v);
   const s=data.summary;
   const maxChannel=Math.max(1,...data.channels.map((c:any)=>Number(c.clicks)));
   const maxRecent=Math.max(1,...data.recent.map((r:any)=>Number(r.clicks)));
@@ -25,6 +32,28 @@ export default async function Resultados(){
     <span className="badge">{APP_VERSION}</span>
     <h1>Resultados</h1>
     <p className="muted">Veja quais ofertas e canais realmente estão atraindo cliques. A contagem de cliques é feita pela própria Vitrine e não depende da API da Shopee; vendas e comissões dependem dos dados disponibilizados pelos marketplaces.</p>
+
+    <section className="analyticsCard salesCard">
+      <div className="salesHead"><div><h2>Vendas e comissões Shopee · 30 dias</h2>
+        <p className="muted">Dados do relatório oficial de afiliados da Shopee, atualizados automaticamente a cada 3 horas. Comissão pendente vira concluída quando o pedido é entregue; cancelamentos não são pagos.</p></div>
+        <SyncCommissionsButton/></div>
+      {!sales?<p className="muted">O relatório ainda não foi carregado. Use “Atualizar vendas agora”.</p>:<>
+      <div className="metricGrid">
+        <div><b>{sales.summary.orders||0}</b><span>Pedidos</span><small>{sales.summary.items||0} ite{Number(sales.summary.items)===1?"m":"ns"} · {brl(sales.summary.sales)} em vendas</small></div>
+        <div><b>{brl(Number(sales.summary.pending||0)+Number(sales.summary.completed||0))}</b><span>Comissão estimada</span><small>{brl(sales.summary.completed)} concluída · {brl(sales.summary.pending)} pendente</small></div>
+        <div><b>{sales.summary.conversion==null?"–":`${(sales.summary.conversion*100).toFixed(1)}%`}</b><span>Conversão</span><small>pedidos ÷ {sales.summary.clicks} cliques reais</small></div>
+        <div><b>{sales.summary.cancelled_orders||0}</b><span>Pedidos cancelados</span><small>{brl(sales.summary.cancelled)} que não serão pagos</small></div>
+      </div>
+      <div className="analyticsGrid analyticsGrid2">
+        <div><h3>Comissão por canal</h3>{sales.byChannel.length?sales.byChannel.map((c:any)=><div className="barRow" key={c.channel}><span>{salesChannel(c.channel)}</span><strong>{brl(c.commission)} · {c.orders} pedido{c.orders===1?"":"s"}</strong></div>):<p className="muted">Sem vendas no período.</p>}</div>
+        <div><h3>Produtos que mais renderam</h3>{sales.byOffer.length?sales.byOffer.map((o:any)=><div className="barRow" key={o.item_id}><span title={o.title}>{shortName(o.title)}{!o.offer_id&&<small> (fora da Vitrine)</small>}</span><strong>{brl(o.commission)} · {o.qty} un.</strong></div>):<p className="muted">Sem vendas no período.</p>}</div>
+      </div>
+      {sales.recent.length>0&&<details className="salesRecent"><summary>Últimas vendas</summary><div className="tableWrap"><table className="adminTable"><thead><tr><th>Data</th><th>Produto</th><th>Canal</th><th>Status</th><th>Comissão</th></tr></thead><tbody>
+        {sales.recent.map((r:any,i:number)=><tr key={i}><td>{when(r.purchase_time)}</td><td>{shortName(r.title)}</td><td>{r.channel?channelLabel(r.channel):"–"}</td><td>{statusLabel(r.order_status)}</td><td>{brl(r.commission)}</td></tr>)}
+      </tbody></table></div></details>}
+      <p className="muted salesSync">{sales.last?`Última atualização: ${when(sales.last.finished_at)} · ${sales.last.ok?"ok":"falhou: "+sales.last.message}`:"Ainda não sincronizado."}</p>
+      </>}
+    </section>
 
     <section className="metricGrid analyticsMetrics">
       <div><b>{s.clicks}</b><span>Cliques rastreados</span><small>Cliques de robôs excluídos: {Number(s.excluded_bots||0)}</small></div>

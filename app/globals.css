@@ -532,3 +532,9 @@
 .loadMoreBtn{font-size:15px}
 @media(max-width:760px){.shelfTrack{scrollbar-width:none}.shelfTrack::-webkit-scrollbar{display:none}}
 @media(min-width:761px){.shelfTitle span{display:none}}
+
+/* v3.6.0 — vendas e comissões */
+.salesCard{margin:22px 0}.salesHead{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.salesHead h2{margin:0 0 6px}
+.salesCard .muted{color:#5f6b66}.salesCard h3{font-size:15px;margin:14px 0 4px;color:#252a34}.salesCard .barRow{text-transform:none;gap:12px}.salesCard .barRow small{color:#8a5b00}
+.syncCommissions{display:grid;gap:6px;justify-items:end}.syncCommissions button{background:var(--brand);border-radius:999px;padding:10px 16px}.syncCommissions small{font-size:12px;color:#5f6b66;max-width:280px;text-align:right}
+.salesRecent summary{cursor:pointer;font-weight:800;margin:12px 0;color:#252a34}.salesSync{font-size:12px;margin:10px 0 0}

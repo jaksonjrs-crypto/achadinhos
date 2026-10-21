@@ -57,12 +57,13 @@ export async function fetchShopeeProducts(page=1,limit=20,keyword?:string,itemId
   return json?.data?.productOfferV2 ?? {nodes:[],pageInfo:null};
 }
 
-export function shortLinkPayload(originUrl:string,subId:string){
+export function shortLinkPayload(originUrl:string,subId:string|string[]){
   if(!productIdentity(originUrl))throw Error('Use o endereço completo do produto Shopee.');
-  if(!/^[A-Za-z0-9]{1,50}$/.test(subId))throw Error('Sub ID da API: use somente letras e números, sem sublinhados.');
-  return {query:`mutation { generateShortLink(input: {originUrl: ${JSON.stringify(originUrl)}, subIds: [${JSON.stringify(subId)}]}) { shortLink } }`};
+  const subIds=(Array.isArray(subId)?subId:[subId]).slice(0,5);
+  if(!subIds.length||subIds.some(s=>!/^[A-Za-z0-9]{1,50}$/.test(s)))throw Error('Sub ID da API: use somente letras e números, sem sublinhados.');
+  return {query:`mutation { generateShortLink(input: {originUrl: ${JSON.stringify(originUrl)}, subIds: [${subIds.map(s=>JSON.stringify(s)).join(', ')}]}) { shortLink } }`};
 }
-export async function generateShopeeLink(originUrl:string,subId:string){
+export async function generateShopeeLink(originUrl:string,subId:string|string[]){
   const body=JSON.stringify(shortLinkPayload(originUrl,subId));
   const res=await fetch(ENDPOINT,{method:'POST',headers:signedHeaders(body),body,cache:'no-store',signal:AbortSignal.timeout(15000)});
   const json=await res.json().catch(()=>({}));
@@ -76,4 +77,25 @@ export async function generateShopeeLink(originUrl:string,subId:string){
   const link=String(json?.data?.generateShortLink?.shortLink||'');
   if(!isShopeeUrl(link)||link===originUrl)throw Error('Shopee retornou um link inválido.');
   return link;
+}
+
+// v3.6.0 — Relatório de conversões (vendas e comissões) do programa de afiliados.
+export const CONVERSION_FIELDS_FULL=`purchaseTime clickTime conversionId totalCommission utmContent
+      orders{ orderId orderStatus items{ itemId itemName itemPrice qty itemTotalCommission } }`;
+export function conversionPayload(start:number,end:number,limit=100,scrollId?:string){
+  const args=[`purchaseTimeStart:${Math.floor(start)}`,`purchaseTimeEnd:${Math.floor(end)}`,`limit:${Math.min(500,Math.max(1,Math.floor(limit)))}`];
+  if(scrollId){if(!/^[A-Za-z0-9_\-=+/.:]{1,500}$/.test(scrollId))throw Error('scrollId inválido');args.push(`scrollId:${JSON.stringify(scrollId)}`);}
+  return {query:`query{ conversionReport(${args.join(',')}){ nodes{ ${CONVERSION_FIELDS_FULL} } pageInfo{ limit hasNextPage scrollId } } }`};
+}
+export async function fetchConversionPage(start:number,end:number,scrollId?:string,limit=100){
+  const body=JSON.stringify(conversionPayload(start,end,limit,scrollId));
+  const res=await fetch(ENDPOINT,{method:'POST',headers:signedHeaders(body),body,cache:'no-store',signal:AbortSignal.timeout(20000)});
+  const json=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(`Shopee HTTP ${res.status}`);
+  if(json?.errors?.length){
+    const e=json.errors[0];let detail=String(e?.message||'Erro na consulta').slice(0,300);
+    for(const v of [process.env.SHOPEE_APP_ID,process.env.SHOPEE_SECRET])if(v)detail=detail.split(v).join('[oculto]');
+    throw new Error(`Shopee relatório [${e?.extensions?.code||e?.code||'sem código'}]: ${detail}`);
+  }
+  return json?.data?.conversionReport??{nodes:[],pageInfo:{hasNextPage:false}};
 }
