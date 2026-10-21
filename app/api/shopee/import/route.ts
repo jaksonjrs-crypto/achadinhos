@@ -12,7 +12,7 @@ export async function POST(req:Request){
     const keyword=String(u.searchParams.get("keyword")||"").trim();
     const category=String(u.searchParams.get("category")||"Outros").trim()||"Outros";
     const minScore=Math.min(100,Math.max(0,Number(u.searchParams.get("minScore")||65)));
-    return NextResponse.json(await importShopeeCandidates({page,limit,keyword,category,minScore}));
+    return NextResponse.json(await importShopeeCandidates({page,limit,keyword,category,minScore,profileId:u.searchParams.get("perfil")||"principal",autoApprove:false}));
   }catch(e:any){
     console.error("Shopee import:",e?.message||e);
     return NextResponse.json({ok:false,error:"Não foi possível importar produtos da Shopee."},{status:502});

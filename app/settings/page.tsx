@@ -1,4 +1,5 @@
 "use client";
+import MiningProfiles from "./MiningProfiles";
 import { useEffect, useState } from "react";
 import { APP_VERSION } from "@/lib/version";
 
@@ -20,6 +21,7 @@ export default function SettingsPage() {
     <p className="muted">Confira a prontidão técnica sem exibir senhas, tokens ou chaves secretas no navegador.</p>
     <div className="settingsQuick"><a href="/prontidao">Ver saúde completa da plataforma →</a></div>
 
+    <MiningProfiles/>
     <section className="integrationBox">
       <h2>Infraestrutura</h2>
       <div className="integrationRows">
@@ -77,3 +79,4 @@ export default function SettingsPage() {
     </section>
   </main>;
 }
+

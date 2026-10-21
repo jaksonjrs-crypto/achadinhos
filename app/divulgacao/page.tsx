@@ -1,3 +1,4 @@
+import {miningProfiles} from '@/lib/mining-profiles';
 import { APP_VERSION } from "@/lib/version";
 import { listPublishedOffers } from "@/lib/offers";
 import { productDisplayTitle } from "@/lib/product-title";
@@ -5,13 +6,16 @@ import PublicationQueue from "./PublicationQueue";
 export const dynamic="force-dynamic";
 const money=(v:number)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v);
 
-export default async function Divulgacao(){
+export default async function Divulgacao({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){
+  const params=await searchParams;const profiles=await miningProfiles();
   let offers:any[]=[];try{offers=await listPublishedOffers()}catch{}
+  if(params.perfil&&params.perfil!=='all')offers=offers.filter(o=>params.perfil==='empty'?!o.perfil:o.perfil===params.perfil);
   return <main className="panel">
     <div className="adminPageHead"><div><span className="badge">{APP_VERSION}</span><h1>Divulgação</h1><p className="muted">Prepare as ofertas e acompanhe cada publicação na fila.</p></div></div>
     <section className="flowSteps"><div><b>1</b><span>Escolha a oferta</span></div><div><b>2</b><span>Prepare texto ou criativo</span></div><div><b>3</b><span>Publique no canal</span></div><div><b>4</b><span>Acompanhe em Resultados</span></div></section>
     <div className="noticeBox"><b>Estratégia:</b> bio/perfil → <code>/ofertas</code>. Post de produto → link individual rastreado por canal.</div>
-    <PublicationQueue offers={offers.map(o=>({id:o.id,title:productDisplayTitle(o.title),marketplace:o.marketplace,price:o.price}))}/>
+<form method="get"><label>Perfil<select name="perfil" defaultValue={params.perfil||"all"}><option value="all">Todos os perfis</option><option value="empty">Sem perfil</option>{profiles.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button>Filtrar</button></form>
+    <PublicationQueue filterProfile={Boolean(params.perfil&&params.perfil!=="all")} offers={offers.map(o=>({id:o.id,title:productDisplayTitle(o.title),marketplace:o.marketplace,price:o.price}))}/>
     {offers.length===0?<div className="empty">Nenhuma oferta publicada disponível para divulgação.</div>:
     <section className="disclosureCards" aria-label="Ofertas prontas para divulgação">
       {offers.map(o=><article className="disclosureCard" key={o.id}>

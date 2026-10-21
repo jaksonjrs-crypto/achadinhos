@@ -494,3 +494,5 @@
 .homeHighlights{margin-bottom:28px}
 
 .campaignSettings form{display:grid;gap:12px;padding:14px;background:#fff;color:#172033;border-radius:8px}.campaignSettings label{display:block}.campaignSettings input:not([type=checkbox]){display:block;width:100%;padding:10px;background:#fff;color:#172033;border:1px solid #64748b;border-radius:6px}.campaignSettings input[type=checkbox]{width:auto;margin-right:8px}.campaignSettings button{background:#087b7c;color:white;padding:12px;border-radius:6px}
+
+.followStrip{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:12px;background:#eaf7f3;color:#133e40;font-size:13px}.followStrip a{padding:8px 12px;border-radius:8px;background:#087b7c;color:white;text-decoration:none}.miningProfiles form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;padding:12px}.miningProfiles label{display:grid;gap:5px}.miningProfiles input,.miningProfiles textarea{background:white;color:#172033;max-width:100%;padding:8px}.miningProfiles input[type=checkbox]{width:20px}.scoreReason{color:#087b7c;font-weight:700}

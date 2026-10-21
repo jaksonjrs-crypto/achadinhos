@@ -1,3 +1,6 @@
+import {miningProfile} from './mining-profiles';
+import {profileMatch} from './mining-profile-rules';
+import {clickBonus,topClickedTitles} from './click-learning';
 import {db} from "./db";
 import {fetchShopeeProducts,generateShopeeLink} from "./shopee-affiliate";
 import {productSafetyCheck} from "./product-safety";
@@ -25,10 +28,13 @@ function originalPrice(p:any){
   return price>0&&d>0&&d<100 ? +(price/(1-d/100)).toFixed(2) : null;
 }
 
-export async function importShopeeCandidates({page=1,limit=20,keyword="",category="Outros",minScore=65,autoApprove=false}:{page?:number;limit?:number;keyword?:string;category?:string;minScore?:number;autoApprove?:boolean}={}){
+export async function importShopeeCandidates({page=1,limit=20,keyword="",category="Outros",minScore=65,autoApprove=false,profileId='principal'}:{page?:number;limit?:number;keyword?:string;category?:string;minScore?:number;autoApprove?:boolean;profileId?:string}={}){
     page=Number.isFinite(page)?Math.max(1,Math.floor(page)):1;
     limit=Number.isFinite(limit)?Math.min(50,Math.max(1,Math.floor(limit))):20;
     minScore=Number.isFinite(minScore)?Math.min(100,Math.max(0,minScore)):65;
+    const profile=await miningProfile(profileId);
+    const topTitles=await topClickedTitles().catch(()=>[]);
+    if(!keyword&&profile.keywords.length)keyword=profile.keywords[(page-1)%profile.keywords.length];
     const data=await fetchShopeeProducts(page,limit,keyword||undefined);
     const sql=db();
     let imported=0, skippedUnsafe=0, skippedDuplicate=0, skippedQuality=0, failedLinks=0;
@@ -51,7 +57,9 @@ export async function importShopeeCandidates({page=1,limit=20,keyword="",categor
         AND (external_id=${externalId} OR product_url=${affiliateUrl}
           OR LOWER(TRIM(title))=LOWER(TRIM(${title}))) LIMIT 1`;
       if(existing.length){skippedDuplicate++;continue}
-      const candidateScore=score(p);
+      const learned=clickBonus(title,topTitles);
+      const candidateScore=Math.min(100,score(p)+learned.bonus);
+      if(!profileMatch(profile,{title,category,price:num(p.price),score:candidateScore})){skippedQuality++;continue}
       const rating=num(p.ratingStar);
       const sales=optionalNum(p.sales);
       const discount=num(p.priceDiscountRate);
@@ -77,9 +85,9 @@ export async function importShopeeCandidates({page=1,limit=20,keyword="",categor
         sales!=null?`Vendas informadas: ${sales}`:`Vendas não informadas`
       ].filter(Boolean).join(" | ");
       const inserted=await sql`INSERT INTO product_candidates
-        (title,category,marketplace,product_url,image_url,price,original_price,score,status,notes,external_id,sold_quantity)
+        (title,category,marketplace,product_url,image_url,price,original_price,score,status,notes,external_id,sold_quantity,perfil,click_bonus,click_reason,manual_discovery)
         VALUES(${title},${category},${"Shopee"},${affiliateUrl},
-          ${p.imageUrl||null},${price},${originalPrice(p)},${candidateScore},${autoApprove?'approved':'review'},${notes},${externalId},${sales})
+          ${p.imageUrl||null},${price},${originalPrice(p)},${candidateScore},${autoApprove?'approved':'review'},${notes},${externalId},${sales},${profile.id},${learned.bonus},${learned.reason},${!autoApprove})
         ON CONFLICT DO NOTHING RETURNING id`;
       if(inserted.length) imported++; else skippedDuplicate++;
     }

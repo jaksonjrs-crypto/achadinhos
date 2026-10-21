@@ -10,7 +10,7 @@ const fields = [
   ["confidence","Confiança da oferta","Informações, preço e destino parecem consistentes?"],
 ] as const;
 
-export default function CandidateEvaluator(){
+export default function CandidateEvaluator({profileId}:{profileId:string}){
   const [title,setTitle]=useState("");
   const [url,setUrl]=useState("");
   const [price,setPrice]=useState("");
@@ -72,7 +72,7 @@ export default function CandidateEvaluator(){
     <div className="evaluationResult">
       <div><span>Resultado</span><strong>{level}</strong><small>{score>=60?"Pode ser salvo para revisão e aprovação.":"Vale comparar com outros produtos antes de cadastrar."}</small></div>
       <div className="scheduleActions">
-        <form action="/api/candidates" method="post">
+        <form action="/api/candidates" method="post"><input type="hidden" name="perfil" value={profileId}/>
           <input type="hidden" name="title" value={title}/><input type="hidden" name="product_url" value={url}/>
           <input type="hidden" name="price" value={price}/><input type="hidden" name="original_price" value={originalPrice}/><input type="hidden" name="category" value={category}/><input type="hidden" name="image_url" value={imageUrl}/><input type="hidden" name="score" value={score}/>
           <input type="hidden" name="notes" value={notes}/><input type="hidden" name="marketplace" value={marketplace}/>

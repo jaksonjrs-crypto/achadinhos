@@ -1,3 +1,6 @@
+import {cookies} from 'next/headers';
+import {clickChannel,CHANNELS} from '@/lib/click-policy';
+import FollowStrip from '../components/FollowStrip';
 import { APP_VERSION } from "@/lib/version";
 import {getVitrineHome} from "@/lib/vitrine-home";
 import type { Metadata } from "next";
@@ -12,7 +15,7 @@ export const metadata:Metadata={
 const discountPercent=(o:any)=>o.original_price>o.price&&o.original_price>0?Math.round((1-o.price/o.original_price)*100):0;
 const money=(v:number)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v);
 
-function OfferCard({offer:o}:{offer:any}){
+function OfferCard({offer:o,channel}:{offer:any;channel:string}){
          const discount=o.original_price&&o.original_price>o.price?Math.round((1-o.price/o.original_price)*100):0;
          return <article className="offerCard" >
            {o.image_url?<img src={o.image_url} alt={o.title} loading="lazy"/>:<div className="placeholder">Vitrine<br/>dos Achados</div>}
@@ -22,7 +25,7 @@ function OfferCard({offer:o}:{offer:any}){
              {o.original_price&&o.original_price>o.price&&<del>{money(o.original_price)}</del>}
              <strong>{money(o.price)}</strong>
              {o.last_synced_at&&<small className="priceVerified">Preço verificado recentemente</small>}
-             <a className="cta" href={`/go/${o.id}?channel=vitrine`} target="_blank" rel="sponsored nofollow noopener" aria-label={`Ver oferta de ${o.title}`}>Ver oferta</a>
+             <a className="cta" href={`/go/${o.id}?channel=${channel}`} target="_blank" rel="sponsored nofollow noopener" aria-label={`Ver oferta de ${o.title}`}>Ver oferta</a>
            </div>
          </article>
 
@@ -30,6 +33,7 @@ function OfferCard({offer:o}:{offer:any}){
 
 export default async function OfertasPage({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){
   const params=await searchParams;
+  const channel=clickChannel(CHANNELS.includes(params.channel as any)?params.channel:(await cookies()).get('vitrine_channel')?.value);
   const selected=String(params.categoria||"").trim();
   const marketplace=String(params.marketplace||"").trim();
   const marketplaces=["Shopee","Mercado Livre"];
@@ -73,7 +77,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
     return `/ofertas?${query.toString()}#ofertas`;
   };
 
-  return <main className="store">
+  return <main className="store"><FollowStrip/>
     <section className="hero marketplaceHero">
       <span className="eyebrow">ACHADOS QUE VALEM A PENA</span>
       <h1>Encontre boas ofertas em um só lugar.</h1>
@@ -94,7 +98,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
 
     {homeView&&highlights.length>0&&<section aria-label="Produtos em destaque" className="homeHighlights">
       {config.exibir_titulo&&<div className="sectionTitle"><h2 id="highlights-title">{config.titulo}</h2></div>}
-      <div className="offerGrid">{highlights.map(o=><OfferCard key={o.id} offer={o}/>)}</div>
+      <div className="offerGrid">{highlights.map(o=><OfferCard key={o.id} offer={o} channel={channel}/>)}</div>
     </section>}
     <section id="ofertas">
       <div className="sectionTitle">
@@ -119,7 +123,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
 
       {unavailable?<div className="empty"><b>Vitrine temporariamente indisponível.</b><br/>Tente novamente mais tarde.</div>:
        visible.length===0?<div className="empty"><b>{busca?"Nenhum achado encontrado.":selected||marketplace?"Nenhuma oferta nesta seleção agora.":"A primeira seleção está chegando."}</b><br/>{busca?"Tente outro termo ou limpe a busca.":selected||marketplace?"Escolha outra opção do menu para continuar.":"As ofertas aprovadas aparecerão aqui automaticamente."}</div>:
-       <div className="offerGrid">{pageOffers.map(o=><OfferCard key={o.id} offer={o}/>)}</div>}
+       <div className="offerGrid">{pageOffers.map(o=><OfferCard key={o.id} offer={o} channel={channel}/>)}</div>}
       {visible.length>0&&<nav className="catalogPagination" aria-label="Páginas de ofertas">
         {page>1?<a href={pageUrl(page-1)} rel="prev">← Anterior</a>:<span aria-disabled="true">← Anterior</span>}
         <span className="pagePosition">Página {page} de {totalPages}</span>

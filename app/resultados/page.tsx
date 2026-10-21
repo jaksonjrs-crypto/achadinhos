@@ -24,7 +24,7 @@ export default async function Resultados(){
     <p className="muted">Veja quais ofertas e canais realmente estão atraindo cliques. A contagem de cliques é feita pela própria Vitrine e não depende da API da Shopee; vendas e comissões dependem dos dados disponibilizados pelos marketplaces.</p>
 
     <section className="metricGrid analyticsMetrics">
-      <div><b>{s.clicks}</b><span>Cliques rastreados</span></div>
+      <div><b>{s.clicks}</b><span>Cliques rastreados</span><small>Cliques de robôs excluídos: {Number(s.excluded_bots||0)}</small></div>
       <div><b>{s.published}</b><span>Ofertas publicadas</span></div>
       <div><b>{avg}</b><span>Cliques por oferta publicada</span></div>
       <div><b>{s.clicked_offers||0}</b><span>Ofertas que receberam clique</span></div>

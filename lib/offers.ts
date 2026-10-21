@@ -5,7 +5,7 @@ export type Offer = {
   id:number; title:string; category:string; marketplace:string; image_url:string|null;
   price:number; original_price:number|null; affiliate_url:string; status:string;
   affiliate_status?:string|null; affiliate_sub_id?:string|null; affiliate_note?:string|null;
-  home_until?:string|null; featured:boolean; created_at:string; updated_at?:string; external_id?:string|null; product_id?:number|null;
+  perfil?:string|null; home_until?:string|null; featured:boolean; created_at:string; updated_at?:string; external_id?:string|null; product_id?:number|null;
   opportunity_score?:number|null; last_synced_at?:string|null; sync_status?:string;
 };
 
@@ -13,7 +13,7 @@ const map=(r:any)=>({...r,id:Number(r.id),product_id:r.product_id==null?null:Num
 
 export async function listPublishedOffers():Promise<Offer[]>{
   const sql=db();
-  const rows=await sql`SELECT id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status
+  const rows=await sql`SELECT to_jsonb(offers)->>'perfil' AS perfil,id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status
      ,to_jsonb(offers)->>'home_until' AS home_until
     FROM offers WHERE status='published'
     ORDER BY featured DESC, opportunity_score DESC NULLS LAST,
@@ -24,7 +24,7 @@ export async function listPublishedOffers():Promise<Offer[]>{
 
 export async function listHomeHighlights():Promise<Offer[]>{
   const sql=db();
-  const rows=await sql`SELECT id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status, to_jsonb(offers)->>'home_until' AS home_until FROM offers
+  const rows=await sql`SELECT to_jsonb(offers)->>'perfil' AS perfil,id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status, to_jsonb(offers)->>'home_until' AS home_until FROM offers
     WHERE status='published' AND (to_jsonb(offers)->>'home_until')::timestamptz>NOW()
     ORDER BY (to_jsonb(offers)->>'home_until')::timestamptz DESC, id DESC`;
   return uniqueOffers(rows.map(map) as Offer[]);
@@ -51,7 +51,7 @@ function uniqueOffers(mapped:Offer[]):Offer[]{
 }
 export async function listAllOffers():Promise<Offer[]>{
   const sql=await ensureAffiliateRegistry();
-  const rows=await sql`SELECT home_until,affiliate_status,affiliate_sub_id,affiliate_note,id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status
+  const rows=await sql`SELECT to_jsonb(offers)->>'perfil' AS perfil,home_until,affiliate_status,affiliate_sub_id,affiliate_note,id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status
     FROM offers ORDER BY updated_at DESC`;
   return rows.map(map) as Offer[];
 }

@@ -1,22 +1,22 @@
 'use client';
 import {useState} from 'react';
 import type {MlListPreview,MlListProduct} from '@/lib/ml-list-parser';
-type Product=MlListProduct&{existing:boolean;possibleDuplicate:boolean};
+type Product=MlListProduct&{profileEligible:boolean;existing:boolean;possibleDuplicate:boolean};
 type Preview=Omit<MlListPreview,'products'>&{products:Product[]};
 const money=(v:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
 
-export default function MercadoLivreImportButton(){
+export default function MercadoLivreImportButton({profileId}:{profileId:string}){
   const [open,setOpen]=useState(false),[file,setFile]=useState<File|null>(null),[preview,setPreview]=useState<Preview|null>(null);
   const [selected,setSelected]=useState<string[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[finished,setFinished]=useState(false);
   async function submit(action:'preview'|'import'){
     if(!file)return;
     setBusy(true);setMessage('');
     try{
-      const form=new FormData();form.set('file',file);form.set('action',action);
+      const form=new FormData();form.set('file',file);form.set('action',action);form.set('perfil',profileId);
       if(action==='import')for(const id of selected)form.append('selected',id);
       const r=await fetch('/api/mercadolivre/import-list',{method:'POST',body:form});
       const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Falha ao importar a lista.');
-      if(action==='preview'){setPreview(d);setSelected(d.products.filter((p:Product)=>!p.existing&&!p.possibleDuplicate).map((p:Product)=>p.externalId));setFinished(false)}
+      if(action==='preview'){setPreview(d);setSelected(d.products.filter((p:Product)=>!p.existing&&!p.possibleDuplicate&&p.profileEligible).map((p:Product)=>p.externalId));setFinished(false)}
       else{setMessage(`${d.imported} produto(s) importado(s) para revisão · ${d.duplicates} já cadastrado(s).`);setFinished(true)}
     }catch(e:any){setMessage(e?.message||'Não foi possível importar a lista.')}
     finally{setBusy(false)}
@@ -34,10 +34,10 @@ export default function MercadoLivreImportButton(){
         {preview.loadedItems<preview.totalItems&&<p role="alert" className="noticeBox">Arquivo parcial: {preview.loadedItems} de {preview.totalItems} produtos. Salve as demais páginas da lista e importe seus arquivos também.</p>}
         {preview.skipped>0&&<p className="muted">{preview.skipped} item(ns) incompleto(s), repetido(s) ou indisponível(is) para importação.</p>}
         <p className="muted">Os preços são os do arquivo salvo. O botão de compra abrirá sua lista de afiliado. Você pode trocar o link de cada produto em Detalhes / corrigir antes de aprovar.</p>
-        <label><input type="checkbox" checked={preview.products.some(p=>!p.existing&&!p.possibleDuplicate)&&preview.products.filter(p=>!p.existing&&!p.possibleDuplicate).every(p=>selected.includes(p.externalId))} onChange={e=>setSelected(e.target.checked?preview.products.filter(p=>!p.existing&&!p.possibleDuplicate).map(p=>p.externalId):[])}/> Selecionar todos os novos</label>
+        <label><input type="checkbox" checked={preview.products.some(p=>!p.existing&&!p.possibleDuplicate&&p.profileEligible)&&preview.products.filter(p=>!p.existing&&!p.possibleDuplicate&&p.profileEligible).every(p=>selected.includes(p.externalId))} onChange={e=>setSelected(e.target.checked?preview.products.filter(p=>!p.existing&&!p.possibleDuplicate&&p.profileEligible).map(p=>p.externalId):[])}/> Selecionar todos os novos</label>
         <div className="mlListProducts">{preview.products.map(p=><label className="mlListProduct" key={p.externalId}>
           <input type="checkbox" disabled={p.existing||busy} checked={selected.includes(p.externalId)} onChange={e=>setSelected(ids=>e.target.checked?[...ids,p.externalId]:ids.filter(id=>id!==p.externalId))}/>
-          <img src={p.imageUrl} alt="" loading="lazy"/><span><b>{p.title}</b><small>{money(p.price)}{p.priceCondition?` · ${p.priceCondition}`:''}{p.existing?' · Já cadastrado':p.possibleDuplicate?' · Possível duplicidade: confira o cadastro existente':''}</small></span>
+          <img src={p.imageUrl} alt="" loading="lazy"/><span><b>{p.title}</b><small>{money(p.price)}{p.priceCondition?` · ${p.priceCondition}`:''}{!p.profileEligible?' · Fora do perfil (seleção manual opcional)':''}{p.existing?' · Já cadastrado':p.possibleDuplicate?' · Possível duplicidade: confira o cadastro existente':''}</small></span>
         </label>)}</div>
         <button type="button" className="mini publish" disabled={busy||!selected.length} onClick={()=>submit('import')}>Importar {selected.length} selecionado(s)</button>
         <p className="muted">Entram em revisão. A publicação ocorre depois da sua aprovação no Garimpo.</p>

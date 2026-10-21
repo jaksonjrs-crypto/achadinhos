@@ -1,4 +1,4 @@
-import {db} from "./db";
+import {ensureMiningProfiles} from './mining-profiles';
 import {productSafetyCheck} from "./product-safety";
 
 import {verifiedShopeeLink} from './affiliate-registry';
@@ -8,8 +8,8 @@ export type AutopilotResult={ok:boolean;offerId?:number;published?:boolean;creat
 const complete=(c:any)=>Boolean(String(c.title||"").trim()&&String(c.image_url||"").trim()&&Number(c.price)>0&&String(c.product_url||"").trim());
 
 export async function autopilotCandidate(candidateId:number):Promise<AutopilotResult>{
- const sql=db();
- const rows=await sql`SELECT id,title,category,marketplace,product_url,image_url,price,original_price,score,status,external_id,sold_quantity,notes FROM product_candidates WHERE id=${candidateId} LIMIT 1`;
+ const sql=await ensureMiningProfiles();
+ const rows=await sql`SELECT id,title,category,marketplace,product_url,image_url,price,original_price,score,status,external_id,sold_quantity,notes,perfil FROM product_candidates WHERE id=${candidateId} LIMIT 1`;
  const c:any=rows[0];
  if(!c)return {ok:false,reason:"Candidato não encontrado"};
  if(!productSafetyCheck(String(c.title||""),String(c.category||""),String(c.notes||"")).allowed)return {ok:false,reason:"Produto bloqueado pela política do catálogo"};
@@ -41,6 +41,7 @@ export async function autopilotCandidate(candidateId:number):Promise<AutopilotRe
     VALUES(${c.title},${c.category||'Casa'},${c.marketplace},${c.image_url},${Number(c.price)},${c.original_price==null?null:Number(c.original_price)},${c.product_url},'published',${c.external_id||null},${productId},${Number(c.score)},${c.external_id?'linked':'unlinked'},${c.external_id?new Date():null}) RETURNING id`;
    offerId=Number((ins[0] as any).id); created=true;
  }
+ await sql`UPDATE offers SET perfil=COALESCE(perfil,${c.perfil||null}) WHERE id=${offerId}`;
  // Remove o candidato: a oferta publicada passa a alimentar Vitrine, Conteúdo, Criativos e Divulgação.
  await sql`DELETE FROM product_candidates WHERE id=${candidateId}`;
  return {ok:true,offerId,published:true,created};

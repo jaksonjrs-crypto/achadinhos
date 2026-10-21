@@ -48,7 +48,7 @@ export default async function Operacao(){
       <a href="/garimpo-inteligente"><strong>{exceptions}</strong><span>pendências para você</span></a>
       <a href="/central"><strong>{drafts.length}</strong><span>rascunhos na Central</span></a>
       <a href="/ofertas"><strong>{published.length}</strong><span>ofertas publicadas</span></a>
-      <a href="/resultados"><strong>{Number(s.clicks||0)}</strong><span>cliques rastreados</span></a>
+      <a href="/resultados"><strong>{Number(s.clicks||0)}</strong><span>cliques rastreados</span><small>Cliques de robôs excluídos: {Number(s.excluded_bots||0)}</small></a>
     </section>
 
     <section className="nextActionCard">

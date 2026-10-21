@@ -33,6 +33,7 @@ if(process.argv[2]){
 }
 console.log('PASS: JSON-only parsing, partial-list warning, catalog/listing identity, prices, affiliate destination, pictures, invalid input, size cap, duplicates and blocked products.');
 
+function loadRules(){const out={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root,'lib/mining-profile-rules.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:out});return out;}
 async function verifyRoute(){
   const known=[{external_id:null,title:'Calça Wide Leg Feminina Calça Duna Pantalona Social Trabalho',source:'offer'}];
   const inserted=[];
@@ -50,10 +51,10 @@ async function verifyRoute(){
   // Adapt VM globals for the multipart route without a database or live API.
   const m={exports:{}};
   const code=ts.transpileModule(fs.readFileSync(path.join(root,'app/api/mercadolivre/import-list/route.ts'),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
-  vm.runInNewContext(code,{module:m,exports:m.exports,File,console,require:n=>({'next/server':{NextResponse:{json:(data,opts={})=>({data,status:opts.status||200})}},'@/lib/db':{db:()=>sql},'@/lib/ml-list-parser':parser}[n])});
+  vm.runInNewContext(code,{module:m,exports:m.exports,File,console,require:n=>({'next/server':{NextResponse:{json:(data,opts={})=>({data,status:opts.status||200})}},'@/lib/mining-profiles':{miningProfile:async()=>({id:'principal',keywords:['liquidificador'],forbidden:[],categories:[],min_price:20,max_price:150,min_score:0})},'@/lib/mining-profile-rules':loadRules(),'@/lib/click-learning':{topClickedTitles:async()=>[],clickBonus:()=>({bonus:0,reason:''})},'@/lib/db':{db:()=>sql},'@/lib/ml-list-parser':parser}[n])});
   function request(action,ids=[]){const f=new FormData();f.set('file',file);f.set('action',action);for(const id of ids)f.append('selected',id);return {formData:async()=>f};}
   const preview=await m.exports.POST(request('preview'));
-  assert.equal(preview.status,200);assert.equal(inserted.length,0,'preview does not import');
+  assert.equal(preview.status,200);assert.equal(preview.data.products[0].profileEligible,false,'out-of-profile garment unchecked by preview');assert.equal(inserted.length,0,'preview does not import');
   assert.equal(preview.data.products[0].possibleDuplicate,true,'manual base title triggers review');
   const first=await m.exports.POST(request('import',p.products.map(x=>x.externalId)));
   assert.equal(first.data.imported,2,'distinct products can share list URL');

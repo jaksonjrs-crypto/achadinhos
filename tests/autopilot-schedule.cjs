@@ -41,7 +41,7 @@ async function checkDiscoveryCadence(){
   if(q.includes('SET last_discovery_at=')){if(lastDiscovery&&lastDiscovery>v[1])return [];lastDiscovery=v[0];return [{id:1}];}
   return [];
  };
- const auto=load('lib/autopilot-policy.ts',{'./db':{db:()=>sql},'./autopilot-schedule':schedule,'./shopee-import':{importShopeeCandidates:async()=>{discoveries++;return {ok:true,imported:0};}},'./product-safety':{},'./telegram-publisher':{},'./publication-queue':{brazilDate:()=> '2026-10-04',ensurePublicationQueue:async()=>sql,queueManualOffers:async()=>({queued:0,queuedTasks:0})},'./autopilot':{}},{SHOPEE_APP_ID:'test',SHOPEE_SECRET:'test'});
+ const auto=load('lib/autopilot-policy.ts',{'./mining-profiles':{miningProfiles:async()=>[{id:'principal',keywords:[],min_score:0}]},'./mining-profile-rules':{profileActive:()=>true,profileMatch:()=>true},'./db':{db:()=>sql},'./autopilot-schedule':schedule,'./shopee-import':{importShopeeCandidates:async()=>{discoveries++;return {ok:true,imported:0};}},'./product-safety':{},'./telegram-publisher':{},'./publication-queue':{brazilDate:()=> '2026-10-04',ensurePublicationQueue:async()=>sql,queueManualOffers:async()=>({queued:0,queuedTasks:0})},'./autopilot':{}},{SHOPEE_APP_ID:'test',SHOPEE_SECRET:'test'});
  assert.equal((await auto.runAutopilot(at('13:07'))).discovery.ok,true);
  assert.equal((await auto.runAutopilot(at('13:22'))).discovery.skipped,true);
  await auto.runAutopilot(at('13:52'));assert.equal(discoveries,1);

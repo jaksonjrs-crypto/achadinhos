@@ -9,8 +9,9 @@ const themes=[
   ["Beleza","beleza cuidados pessoais"]
 ] as const;
 
-export default function ShopeeImportButton(){
+export default function ShopeeImportButton({profiles,profileId}:{profiles:any[];profileId:string}){
   const [theme,setTheme]=useState("Casa");
+  const [keyword,setKeyword]=useState("");
   const [page,setPage]=useState(1);
   const [state,setState]=useState("");
   const [busy,setBusy]=useState(false);
@@ -24,7 +25,7 @@ export default function ShopeeImportButton(){
     const target=next?page+1:1;
     setBusy(true);setState("Garimpando ofertas da Shopee…");
     try{
-      const q=new URLSearchParams({limit:"20",page:String(target),keyword:selected[1],category:selected[0],minScore:"65"});
+      const q=new URLSearchParams({limit:"20",page:String(target),keyword:keyword.trim()||profiles.find(p=>p.id===profileId)?.keywords?.[(target-1)%(profiles.find(p=>p.id===profileId)?.keywords?.length||1)]||"",perfil:profileId,category:selected[0],minScore:"65"});
       const r=await fetch(`/api/shopee/import?${q}`,{method:"POST"});
       const j=await r.json();
       if(!r.ok||!j.ok) throw new Error(j.error||"Falha");
@@ -61,6 +62,7 @@ export default function ShopeeImportButton(){
   }
 
   return <div className="importToolbar">
+    <input aria-label="Palavra-chave da busca manual" placeholder="Busca manual (opcional)" value={keyword} onChange={e=>setKeyword(e.target.value)}/>
     <select aria-label="Tema do garimpo" value={theme} onChange={e=>{setTheme(e.target.value);setPage(1)}}>{themes.map(([label])=><option key={label}>{label}</option>)}</select>
     <button onClick={()=>run(false)} disabled={busy||configured===false}>{busy?"Garimpando…":"Garimpar Shopee"}</button>
     <button className="secondaryMini" onClick={()=>run(true)} disabled={busy||configured===false}>Próxima</button>

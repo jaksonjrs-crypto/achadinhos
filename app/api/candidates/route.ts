@@ -1,3 +1,5 @@
+import {miningProfile} from '@/lib/mining-profiles';
+import {clickBonus,topClickedTitles} from '@/lib/click-learning';
 import {NextRequest,NextResponse} from "next/server";
 import {db} from "@/lib/db";
 import {productSafetyCheck} from "@/lib/product-safety";
@@ -19,6 +21,9 @@ export async function POST(req:NextRequest){
   if(!safety.allowed)return NextResponse.json({error:"Categoria de produto não permitida neste projeto."},{status:400});
   if(productUrl){try{const u=new URL(productUrl);if(!["http:","https:"].includes(u.protocol))throw 0}catch{return NextResponse.json({error:"Link inválido"},{status:400})}}
   if(imageUrl){try{const u=new URL(imageUrl);if(!["http:","https:"].includes(u.protocol))throw 0}catch{return NextResponse.json({error:"URL da imagem inválida"},{status:400})}}
+  const profile=await miningProfile(String(f.get("perfil")||"principal"));
+  const learned=clickBonus(title,await topClickedTitles().catch(()=>[]));
+  const finalScore=Math.min(100,score+learned.bonus);
   const sql=db();
   const duplicate=await sql`
     SELECT id FROM product_candidates
@@ -33,7 +38,7 @@ export async function POST(req:NextRequest){
       AND ((${productUrl}<>'' AND affiliate_url=${productUrl}) OR LOWER(TRIM(title))=LOWER(TRIM(${title})))
     LIMIT 1`;
   if(duplicate.length||published.length) return NextResponse.redirect(new URL("/garimpo-inteligente?duplicate=1",req.url),303);
-  await sql`INSERT INTO product_candidates(title,category,marketplace,product_url,image_url,price,original_price,score,status,notes)
-    VALUES(${title},${category},${marketplace},${productUrl||null},${imageUrl||null},${price},${originalPrice},${score},'review',${notes||null})`;
+  await sql`INSERT INTO product_candidates(title,category,marketplace,product_url,image_url,price,original_price,score,status,notes,perfil,click_bonus,click_reason,manual_discovery)
+    VALUES(${title},${category},${marketplace},${productUrl||null},${imageUrl||null},${price},${originalPrice},${finalScore},'review',${notes||null},${profile.id},${learned.bonus},${learned.reason},TRUE)`;
   return NextResponse.redirect(new URL("/garimpo-inteligente?saved=1",req.url),303);
 }

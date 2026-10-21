@@ -7,7 +7,7 @@ const channels=[["pinterest","Pinterest"],["instagram","Instagram"],["facebook",
 const labels:Record<string,string>=Object.fromEntries(channels);
 const states:Record<string,string>={ready:"Pronto",scheduled:"Agendado",publishing:"Enviando",published:"Concluído",failed:"Falhou",skipped:"Ignorado"};
 
-export default function PublicationQueue({offers}:{offers:Offer[]}){
+export default function PublicationQueue({offers,filterProfile=false}:{offers:Offer[];filterProfile?:boolean}){
   const [tasks,setTasks]=useState<Task[]>([]),[offerId,setOfferId]=useState(String(offers[0]?.id||""));
   const [channel,setChannel]=useState("pinterest"),[when,setWhen]=useState(""),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
   const [origin,setOrigin]=useState("");
@@ -74,7 +74,8 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
     try{const r=await fetch("/api/publication-tasks/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:t.id,boardId:t.channel==="pinterest"?boardId:undefined})});const d=await r.json();await reload();if(!r.ok)throw new Error(d.error||"Falha na publicação");setMessage(d.sandbox?`Pinterest: teste Sandbox confirmado. Pin ${d.externalId}. Não houve divulgação em produção.`:`${labels[t.channel]}: publicação confirmada.${d.manychat?` Manychat: ${d.manychat.note}`:""}`)}
     catch(e:any){setMessage(e?.message||"Falha na publicação")}finally{setBusy(false)}
   }
-  const pending=tasks.filter(t=>!["published","skipped"].includes(t.status)).length;
+  const visibleTasks=filterProfile?tasks.filter(t=>offers.some(o=>o.id===t.offer_id)):tasks;
+  const pending=visibleTasks.filter(t=>!["published","skipped"].includes(t.status)).length;
   return <section className="integrationBox publicationQueue">
     <div className="sectionTitle"><div><span className="eyebrow">DIVULGAÇÃO</span><h2>Fila operacional</h2></div><span>{pending} pendentes</span></div>
     <p className="muted">Cadastros manuais publicados e completos também entram na fila, incluindo Mercado Livre. Atualizar o cadastro não repete o envio. Agendar organiza a fila; o envio automático só ocorre em canais conectados e habilitados para isso.</p>
@@ -89,8 +90,8 @@ export default function PublicationQueue({offers}:{offers:Offer[]}){
     <p className="muted">Pinterest: {connections.pinterest?.connected?"conectado":"conexão pendente"} · Telegram: {connections.telegram?.configured?"bot configurado":"bot pendente"} · Instagram: {connections.instagram?.configured?"credenciais cadastradas — use Verificar APIs":"envio assistido"} · Facebook: {connections.facebook?.configured?"credenciais cadastradas — use Verificar APIs":"envio assistido"}. WhatsApp e TikTok continuam com publicação manual.</p>
     <button className="mini secondaryMini" type="button" onClick={checkChannels}>Verificar APIs</button>{diagnostic&&<p role="status" className="muted">{diagnostic}</p>}
     {message&&<p role="status" className="noticeBox">{message}</p>}
-    {tasks.length===0?<div className="empty">A fila está vazia. Escolha uma oferta e um canal para começar.</div>:
-    <div className="queueList">{tasks.map(t=><article className="queueItem" key={t.id}>
+    {visibleTasks.length===0?<div className="empty">A fila está vazia. Escolha uma oferta e um canal para começar.</div>:
+    <div className="queueList">{visibleTasks.map(t=><article className="queueItem" key={t.id}>
       <div><b>{t.title}</b><small>{t.marketplace} · {labels[t.channel]||t.channel} · {String(t.cycle_date).slice(0,10)}{t.scheduled_at?` · ${new Date(t.scheduled_at).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})}`:""}</small>{t.last_error&&<small className="queueError">{t.last_error}</small>}</div>
       <span className="channelTag">{t.status==="skipped"&&t.external_id?.startsWith("sandbox:")?"Teste concluído":states[t.status]||t.status}</span>
       <div className="rowActions">

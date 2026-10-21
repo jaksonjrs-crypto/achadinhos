@@ -1,3 +1,6 @@
+import {miningProfile} from '@/lib/mining-profiles';
+import {profileMatch} from '@/lib/mining-profile-rules';
+import {clickBonus,topClickedTitles} from '@/lib/click-learning';
 import {NextRequest,NextResponse} from 'next/server';
 import {db} from '@/lib/db';
 import {ML_LIST_MAX_BYTES,parseMlListHtml} from '@/lib/ml-list-parser';
@@ -8,6 +11,8 @@ export async function POST(req:NextRequest){
     const form=await req.formData(),file=form.get('file'),action=String(form.get('action')||'preview');
     if(!(file instanceof File)||!file.size||file.size>ML_LIST_MAX_BYTES)return NextResponse.json({ok:false,error:'Selecione um arquivo HTML de até 2 MB.'},{status:400});
     if(!['preview','import'].includes(action))return NextResponse.json({ok:false,error:'Ação inválida.'},{status:400});
+    const profile=await miningProfile(String(form.get('perfil')||'principal'));
+    const topTitles=await topClickedTitles().catch(()=>[]);
     const preview=parseMlListHtml(await file.text(),String(form.get('affiliateUrl')||'')||undefined);
     const sql=db();
     const known=await sql`SELECT external_id,title,'offer' AS source FROM offers
@@ -19,7 +24,8 @@ export async function POST(req:NextRequest){
       const title=normalize(p.title);
       const existing=known.some((k:any)=>k.external_id===p.externalId||normalize(String(k.title||''))===title);
       const possibleDuplicate=!existing&&known.some((k:any)=>!k.external_id&&normalize(String(k.title||'')).length>=30&&title.startsWith(normalize(String(k.title||''))+' '));
-      return {...p,existing,possibleDuplicate};
+      const learned=clickBonus(p.title,topTitles),score=Math.min(100,p.score+learned.bonus);
+      return {...p,score,learned,profileEligible:profileMatch(profile,{title:p.title,category:p.category,price:p.price,score}),existing,possibleDuplicate};
     });
     if(action==='preview')return NextResponse.json({ok:true,...preview,products});
     const selected=new Set(form.getAll('selected').map(String));
@@ -28,8 +34,8 @@ export async function POST(req:NextRequest){
     let imported=0,duplicates=0;
     for(const p of products.filter(p=>selected.has(p.externalId))){
       // Do not match by list URL: different products share this affiliate list.
-      const rows=await sql`INSERT INTO product_candidates(title,category,marketplace,product_url,image_url,price,original_price,score,status,notes,external_id)
-        SELECT ${p.title},${p.category},'Mercado Livre',${p.productUrl},${p.imageUrl},${p.price},${p.originalPrice},${p.score},'review',${p.notes},${p.externalId}
+      const rows=await sql`INSERT INTO product_candidates(title,category,marketplace,product_url,image_url,price,original_price,score,status,notes,external_id,perfil,click_bonus,click_reason,manual_discovery)
+        SELECT ${p.title},${p.category},'Mercado Livre',${p.productUrl},${p.imageUrl},${p.price},${p.originalPrice},${p.score},'review',${p.notes},${p.externalId},${profile.id},${p.learned.bonus},${p.learned.reason},TRUE
         WHERE NOT EXISTS(SELECT 1 FROM offers WHERE LOWER(TRIM(marketplace)) IN ('mercado livre','mercadolivre')
           AND (external_id=${p.externalId} OR LOWER(TRIM(title))=LOWER(TRIM(${p.title}))))
         AND NOT EXISTS(SELECT 1 FROM product_candidates WHERE LOWER(TRIM(marketplace)) IN ('mercado livre','mercadolivre')

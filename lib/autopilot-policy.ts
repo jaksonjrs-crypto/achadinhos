@@ -1,3 +1,5 @@
+import {miningProfiles} from './mining-profiles';
+import {profileActive,profileMatch} from './mining-profile-rules';
 import {importShopeeCandidates} from './shopee-import';
 import {randomUUID} from 'node:crypto';
 import {db} from './db';
@@ -42,6 +44,7 @@ export async function runAutopilot(now=new Date()){
   if(!policy.enabled)return {ok:true,ran:false,reason:'Autopiloto desativado',date};
   if(hour<policy.start_hour||hour>=policy.end_hour)return {ok:true,ran:false,reason:'Fora do horário permitido',date};
   const sql=db();
+  const profiles=(await miningProfiles()).filter(p=>profileActive(p,date));
   const token=randomUUID();
   const claimed=await sql`UPDATE autopilot_policy SET run_token=${token},lease_until=NOW()+INTERVAL '2 minutes'
     WHERE id=1 AND (lease_until IS NULL OR lease_until<NOW()) RETURNING id`;
@@ -52,32 +55,41 @@ export async function runAutopilot(now=new Date()){
   const remaining=Math.max(0,policy.max_per_day-Number(count[0]?.total||0));
   // Automatic discovery is limited to the official Shopee connector. A failed
   // discovery must not prevent already approved offers from being processed.
-  let discovery:Awaited<ReturnType<typeof importShopeeCandidates>>|{ok:false;reason:string}|{ok:true;imported:number;skipped:true}={ok:false,reason:'Credenciais Shopee ausentes'};
+  let discovery:Awaited<ReturnType<typeof importShopeeCandidates>>|{ok:false;reason:string}|{ok:true;imported:number;skipped:boolean}={ok:false,reason:'Credenciais Shopee ausentes'};
   if(process.env.SHOPEE_APP_ID?.trim()&&process.env.SHOPEE_SECRET?.trim()){
     const discoveryClaim=await sql`UPDATE autopilot_policy SET last_discovery_at=${now.toISOString()}
       WHERE id=1 AND (last_discovery_at IS NULL OR last_discovery_at<=${new Date(now.getTime()-3600000).toISOString()}) RETURNING id`;
     if(discoveryClaim.length){
-      try{discovery=await importShopeeCandidates({limit:10,minScore:policy.min_score,autoApprove:true})}
+      try{
+        let imported=0;
+        // Preserve the existing ten-item discovery budget and hourly cadence.
+        for(let i=0;i<profiles.length&&i<10;i++){
+          const profile=profiles[i],limit=Math.floor(10/Math.min(profiles.length,10))+(i<10%Math.min(profiles.length,10)?1:0);
+          const keyword=profile.keywords.length?profile.keywords[Math.floor(now.getTime()/3600000)%profile.keywords.length]:'';
+          const result=await importShopeeCandidates({limit,minScore:Math.max(policy.min_score,profile.min_score),autoApprove:true,profileId:profile.id,keyword});imported+=result.imported;
+        }
+        discovery={ok:true,imported,skipped:profiles.length===0};
+      }
       catch{discovery={ok:false,reason:'Consulta Shopee falhou; verificar acesso à API'}}
     }else discovery={ok:true,imported:0,skipped:true};
   }
   // Keep searching within the allowed hours even after the publication budget
   // is exhausted. Approved candidates wait for a later day; queued sends use
   // their own daily channel budget below.
-  const candidates=await sql`SELECT c.id,c.title,c.marketplace,c.external_id FROM product_candidates c
-    WHERE c.status='approved' AND c.score>=${policy.min_score}
+  const candidates=await sql`SELECT c.id,c.title,c.marketplace,c.external_id,c.category,c.price,c.score,c.perfil,c.manual_discovery FROM product_candidates c
+    WHERE c.status='approved' AND c.manual_discovery=FALSE AND c.score>=${policy.min_score}
       AND c.image_url IS NOT NULL AND c.product_url IS NOT NULL AND c.price>0
       AND NOT EXISTS (SELECT 1 FROM offers o WHERE
         LOWER(TRIM(o.marketplace))=LOWER(TRIM(c.marketplace))
         AND (c.external_id IS NOT NULL AND o.external_id=c.external_id OR LOWER(TRIM(o.title))=LOWER(TRIM(c.title)))
         AND (o.status='published' OR o.updated_at>NOW()-(${policy.cooldown_days}::int*INTERVAL '1 day')))
-    ORDER BY c.score DESC,c.created_at ASC LIMIT ${remaining}`;
+    ORDER BY c.score DESC,c.created_at ASC`;
   // Lazy import avoids a dependency cycle with the candidate publishing flow.
   const {autopilotCandidate}=await import('./autopilot');
   const queue=await ensurePublicationQueue();
   const manual=await queueManualOffers(undefined,date);
   let published=0,pending=0,failed=0,queued=manual.queued,queuedTasks=manual.queuedTasks,telegramSent=0,telegramFailed=0;
-  for(const c of candidates){
+  for(const c of candidates.filter(c=>profiles.some(p=>(!c.perfil||p.id===c.perfil)&&profileMatch(p,{title:String(c.title),category:String(c.category),price:Number(c.price),score:Number(c.score)}))).slice(0,remaining)){
     const r=await autopilotCandidate(Number(c.id));
     if(!r.ok){failed++;continue}
     if(!r.published||!r.offerId){pending++;continue}
