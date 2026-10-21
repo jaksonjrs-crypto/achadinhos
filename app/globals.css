@@ -529,3 +529,6 @@
   .shelfTrack{grid-auto-columns:44%;gap:9px;margin:0 -11px;padding:8px 11px 8px;scroll-padding:0 11px}
   .shelfTitle h2{font-size:19px}
 }
+.loadMoreBtn{font-size:15px}
+@media(max-width:760px){.shelfTrack{scrollbar-width:none}.shelfTrack::-webkit-scrollbar{display:none}}
+@media(min-width:761px){.shelfTitle span{display:none}}
