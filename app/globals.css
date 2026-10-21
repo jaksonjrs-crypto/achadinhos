@@ -538,3 +538,6 @@
 .salesCard .muted{color:#5f6b66}.salesCard h3{font-size:15px;margin:14px 0 4px;color:#252a34}.salesCard .barRow{text-transform:none;gap:12px}.salesCard .barRow small{color:#8a5b00}
 .syncCommissions{display:grid;gap:6px;justify-items:end}.syncCommissions button{background:var(--brand);border-radius:999px;padding:10px 16px}.syncCommissions small{font-size:12px;color:#5f6b66;max-width:280px;text-align:right}
 .salesRecent summary{cursor:pointer;font-weight:800;margin:12px 0;color:#252a34}.salesSync{font-size:12px;margin:10px 0 0}
+/* v3.6.1 — instalar o app da Vitrine */
+.installApp{margin:0;padding:10px 12px 18px;text-align:center;background:#eaf7f3;color:#133e40;font-size:13px;line-height:1.45}
+.installApp button{background:var(--orange);color:#fff;border-radius:999px;padding:10px 18px;font-weight:800}

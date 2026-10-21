@@ -7,10 +7,16 @@ import {categoryIcon,isKids,KIDS_CATEGORY,activeSeasons,SORTS,PAGE_STEP,shownCou
 import type { Metadata } from "next";
 
 export const dynamic="force-dynamic";
+export const viewport={themeColor:"#087b7c"};
 export const metadata:Metadata={
   title:"Vitrine dos Achados | Ofertas para casa, cozinha, pet e organização",
   description:"Seleção de achados e ofertas para casa, cozinha, pet e organização. Links de afiliado podem gerar comissão sem custo adicional para você.",
-  robots:{index:true,follow:true}
+  robots:{index:true,follow:true},
+  // v3.6.1: a Vitrine instala como app próprio ("Vitrine dos Achados"), separado do painel Garimpo.
+  manifest:"/vitrine.webmanifest",
+  applicationName:"Vitrine dos Achados",
+  appleWebApp:{capable:true,title:"Vitrine",statusBarStyle:"default"},
+  icons:{icon:"/brand/icon-192.png",apple:"/brand/apple-touch-icon.png"}
 };
 
 const discountPercent=(o:any)=>o.original_price>o.price&&o.original_price>0?Math.round((1-o.price/o.original_price)*100):0;
