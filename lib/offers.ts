@@ -24,9 +24,9 @@ export async function listPublishedOffers():Promise<Offer[]>{
 
 export async function listHomeHighlights():Promise<Offer[]>{
   const sql=db();
-  const rows=await sql`SELECT *, to_jsonb(offers)->>'home_until' AS home_until FROM offers
+  const rows=await sql`SELECT id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status, to_jsonb(offers)->>'home_until' AS home_until FROM offers
     WHERE status='published' AND (to_jsonb(offers)->>'home_until')::timestamptz>NOW()
-    ORDER BY home_until DESC, id DESC`;
+    ORDER BY (to_jsonb(offers)->>'home_until')::timestamptz DESC, id DESC`;
   return uniqueOffers(rows.map(map) as Offer[]);
 }
 
