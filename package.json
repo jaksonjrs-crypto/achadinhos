@@ -12,7 +12,8 @@
     "test:autopilot-schedule": "node tests/autopilot-schedule.cjs",
     "test:catalog-price": "node tests/catalog-price.cjs",
     "test:affiliate-export": "node tests/affiliate-export.cjs",
-    "test:facebook": "node tests/facebook-publisher.cjs"
+    "test:facebook": "node tests/facebook-publisher.cjs",
+    "test:release-3510": "node tests/release-3510.cjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

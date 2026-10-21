@@ -3,12 +3,12 @@ import { getDashboardStats } from "@/lib/analytics";
 export const dynamic="force-dynamic";
 export const revalidate=0;
 
-const channelLabel=(v:string)=>({instagram:"Instagram",whatsapp:"WhatsApp",telegram:"Telegram",pinterest:"Pinterest",vitrine:"Vitrine"}[v]||v);
+const channelLabel=(v:string)=>({facebook:"Facebook",instagram:"Instagram",whatsapp:"WhatsApp",telegram:"Telegram",pinterest:"Pinterest",vitrine:"Vitrine"}[v]||v);
 const dayLabel=(v:any)=>new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"2-digit",timeZone:"UTC"}).format(new Date(v));
 const shortName=(v:string)=>{const clean=String(v||"").replace(/\s+/g," ").trim(); const words=clean.split(" "); return words.length>7?`${words.slice(0,7).join(" ")}…`:clean};
 
 export default async function Resultados(){
-  let data:any={summary:{total:0,published:0,drafts:0,expired:0,clicks:0,clicked_offers:0},channels:[],top:[],recent:[],periods:{last7:0,prev7:0,last30:0}};
+  let data:any={summary:{total:0,published:0,drafts:0,expired:0,clicks:0,clicked_offers:0},channels:[],top:[],recent:[],periods:{last7:0,prev7:0,last30:0},apps:[]};
   try{data=await getDashboardStats()}catch{}
   const s=data.summary;
   const maxChannel=Math.max(1,...data.channels.map((c:any)=>Number(c.clicks)));
@@ -16,6 +16,9 @@ export default async function Resultados(){
   const avg=s.published>0?(Number(s.clicks)/Number(s.published)).toFixed(1):"0";
   const topChannel=data.channels[0];
   const last7=Number(data.periods?.last7||0), prev7=Number(data.periods?.prev7||0), last30=Number(data.periods?.last30||0);
+  const apps:any[]=data.apps||[];
+  const appsTotal=apps.reduce((t:number,a:any)=>t+Number(a.clicks||0),0);
+  const appsLast30=apps.reduce((t:number,a:any)=>t+Number(a.last30||0),0);
   const trend=prev7===0?(last7>0?null:0):Math.round((last7-prev7)/prev7*100);
 
   return <main className="panel">
@@ -36,6 +39,13 @@ export default async function Resultados(){
       <div><span>7 dias vs. 7 anteriores</span><strong>{trend===null?"Novo tráfego":`${trend>0?"+":""}${trend}%`}</strong><small>{last7} agora · {prev7} no período anterior. Variação de cliques, não de vendas.</small></div>
     </section>
 
+    <section className="analyticsCard appClicks">
+      <h2>Pessoas vindas dos apps Facebook e Instagram</h2>
+      <p className="muted">Conta só cliques feitos dentro dos aplicativos do Facebook e do Instagram, que é como clica quem viu o post ou o Story. Exclui robôs, testes e os aparelhos do administrador.</p>
+      <div className="metricGrid"><div><b>{appsTotal}</b><span>Cliques pelos apps (total)</span><small>{appsLast30} nos últimos 30 dias</small></div>
+      {apps.map((a:any)=><div key={a.channel}><b>{a.clicks}</b><span>Atribuídos a {channelLabel(a.channel)}</span><small>{a.last30} nos últimos 30 dias</small></div>)}</div>
+    </section>
+
     <div className="analyticsGrid analyticsGrid2">
       <section className="analyticsCard">
         <h2>Cliques por canal</h2>
@@ -53,8 +63,8 @@ export default async function Resultados(){
 
     <section className="analyticsCard topOffers2">
       <h2>Ofertas mais clicadas</h2>
-      {data.top.length?<div className="tableScroll"><table className="adminTable"><thead><tr><th>Produto</th><th>Marketplace</th><th>Total</th><th>Instagram</th><th>WhatsApp</th><th>Telegram</th><th>Pinterest</th><th>Vitrine</th></tr></thead><tbody>
-        {data.top.map((o:any)=><tr key={o.id}><td><div className="analyticsProduct">{o.image_url?<img src={o.image_url} alt="" loading="lazy"/>:<span className="analyticsProductPlaceholder">VA</span>}<span title={o.title}>{shortName(o.title)}</span></div></td><td>{o.marketplace}</td><td><strong>{o.clicks}</strong></td><td>{o.instagram}</td><td>{o.whatsapp}</td><td>{o.telegram}</td><td>{o.pinterest}</td><td>{o.vitrine}</td></tr>)}
+      {data.top.length?<div className="tableScroll"><table className="adminTable"><thead><tr><th>Produto</th><th>Marketplace</th><th>Total</th><th>Facebook</th><th>Instagram</th><th>WhatsApp</th><th>Telegram</th><th>Pinterest</th><th>Vitrine</th></tr></thead><tbody>
+        {data.top.map((o:any)=><tr key={o.id}><td><div className="analyticsProduct">{o.image_url?<img src={o.image_url} alt="" loading="lazy"/>:<span className="analyticsProductPlaceholder">VA</span>}<span title={o.title}>{shortName(o.title)}</span></div></td><td>{o.marketplace}</td><td><strong>{o.clicks}</strong></td><td>{o.facebook??0}</td><td>{o.instagram}</td><td>{o.whatsapp}</td><td>{o.telegram}</td><td>{o.pinterest}</td><td>{o.vitrine}</td></tr>)}
       </tbody></table></div>:<p className="muted">Nenhuma oferta cadastrada.</p>}
       <p className="analyticsNote">Os cliques indicam interesse no link. Não representam, por si só, compras ou comissões confirmadas.</p>
     </section>

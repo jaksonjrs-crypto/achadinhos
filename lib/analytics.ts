@@ -1,8 +1,8 @@
-import {BOT_PATTERN} from './click-policy';
+import {BOT_PATTERN,APP_PATTERN} from './click-policy';
 import { db } from "./db";
 
 async function modernStats(sql:any){
-  const [summary,channels,top,recent,periods] = await Promise.all([
+  const [summary,channels,top,recent,periods,apps] = await Promise.all([
     sql`SELECT COUNT(*)::int AS total,
       COUNT(*) FILTER (WHERE status='published')::int AS published,
       COUNT(*) FILTER (WHERE status='draft')::int AS drafts,
@@ -13,6 +13,7 @@ async function modernStats(sql:any){
       FROM offers`,
     sql`SELECT channel,COUNT(*)::int AS clicks FROM offer_clicks WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN} GROUP BY channel ORDER BY clicks DESC`,
     sql`SELECT o.id,o.title,o.image_url,o.marketplace,o.status,COUNT(c.id)::int AS clicks,
+      COUNT(*) FILTER (WHERE c.channel='facebook')::int AS facebook,
       COUNT(*) FILTER (WHERE c.channel='instagram')::int AS instagram,
       COUNT(*) FILTER (WHERE c.channel='whatsapp')::int AS whatsapp,
       COUNT(*) FILTER (WHERE c.channel='telegram')::int AS telegram,
@@ -26,9 +27,13 @@ async function modernStats(sql:any){
     sql`SELECT
       COUNT(*) FILTER (WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN} AND created_at>=NOW()-INTERVAL '7 days')::int AS last7,
       COUNT(*) FILTER (WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN} AND created_at>=NOW()-INTERVAL '14 days' AND created_at<NOW()-INTERVAL '7 days')::int AS prev7,
-      COUNT(*) FILTER (WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN} AND created_at>=NOW()-INTERVAL '30 days')::int AS last30 FROM offer_clicks WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN}`
+      COUNT(*) FILTER (WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN} AND created_at>=NOW()-INTERVAL '30 days')::int AS last30 FROM offer_clicks WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN}`,
+    sql`SELECT channel,COUNT(*)::int AS clicks,
+      COUNT(*) FILTER (WHERE created_at>=NOW()-INTERVAL '30 days')::int AS last30
+      FROM offer_clicks WHERE COALESCE(user_agent,'') ~* ${APP_PATTERN} AND COALESCE(user_agent,'') !~* ${BOT_PATTERN}
+      GROUP BY channel ORDER BY clicks DESC`
   ]);
-  return {summary:summary[0],channels,top,recent,periods:periods[0]};
+  return {summary:summary[0],channels,top,recent,periods:periods[0],apps};
 }
 
 async function legacyStats(sql:any){
@@ -43,6 +48,7 @@ async function legacyStats(sql:any){
       FROM offers`,
     sql`SELECT source AS channel,COUNT(*)::int AS clicks FROM offer_clicks WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN} GROUP BY source ORDER BY clicks DESC`,
     sql`SELECT o.id,o.title,o.image_url,o.marketplace,o.status,COUNT(c.id)::int AS clicks,
+      COUNT(*) FILTER (WHERE c.source='facebook')::int AS facebook,
       COUNT(*) FILTER (WHERE c.source='instagram')::int AS instagram,
       COUNT(*) FILTER (WHERE c.source='whatsapp')::int AS whatsapp,
       COUNT(*) FILTER (WHERE c.source='telegram')::int AS telegram,
@@ -58,7 +64,7 @@ async function legacyStats(sql:any){
       COUNT(*) FILTER (WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN} AND clicked_at>=NOW()-INTERVAL '14 days' AND clicked_at<NOW()-INTERVAL '7 days')::int AS prev7,
       COUNT(*) FILTER (WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN} AND clicked_at>=NOW()-INTERVAL '30 days')::int AS last30 FROM offer_clicks WHERE COALESCE(user_agent,'') !~* ${BOT_PATTERN}`
   ]);
-  return {summary:summary[0],channels,top,recent,periods:periods[0]};
+  return {summary:summary[0],channels,top,recent,periods:periods[0],apps:[]};
 }
 
 export async function getDashboardStats(){

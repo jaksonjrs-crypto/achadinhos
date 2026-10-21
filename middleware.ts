@@ -1,4 +1,4 @@
-import {CHANNELS} from '@/lib/click-policy';
+import {CHANNELS,ADMIN_DEVICE_COOKIE} from '@/lib/click-policy';
 import {NextRequest,NextResponse} from "next/server";
 import {ADMIN_COOKIE,verifyAdminSession} from "@/lib/admin-auth";
 
@@ -13,7 +13,11 @@ export async function middleware(req:NextRequest){
     return response;
   }
   const ok=await verifyAdminSession(req.cookies.get(ADMIN_COOKIE)?.value);
-  if(ok) return NextResponse.next();
+  if(ok){
+    const response=NextResponse.next();
+    if(req.cookies.get(ADMIN_DEVICE_COOKIE)?.value!=='1')response.cookies.set(ADMIN_DEVICE_COOKIE,'1',{httpOnly:true,sameSite:'lax',secure:req.nextUrl.protocol==='https:',path:'/',maxAge:60*60*24*365});
+    return response;
+  }
   if(path.startsWith("/api/")) return NextResponse.json({error:"Não autorizado"},{status:401});
   const url=req.nextUrl.clone(); url.pathname="/admin/login"; url.searchParams.set("next",path); return NextResponse.redirect(url);
 }

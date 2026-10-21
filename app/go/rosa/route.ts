@@ -1,4 +1,4 @@
-import {countClick,clickChannel} from '@/lib/click-policy';
+import {countClick,clickChannel,ADMIN_DEVICE_COOKIE} from '@/lib/click-policy';
 import {NextRequest,NextResponse,after} from 'next/server';
 import {db} from '@/lib/db';
 import {validateCampaignDestination} from '@/lib/campaign-links';
@@ -7,7 +7,7 @@ export async function GET(req:NextRequest){
   try{
     const sql=db();const rows=await sql`SELECT destination FROM campaign_links WHERE slug='rosa' LIMIT 1`;
     if(!rows[0])return new NextResponse('Campanha indisponível',{status:404});
-    if(countClick(req.headers.get('user-agent'),req.nextUrl.searchParams.get('teste')))after(async()=>{
+    if(countClick(req.headers.get('user-agent'),req.nextUrl.searchParams.get('teste'),req.cookies.get(ADMIN_DEVICE_COOKIE)?.value))after(async()=>{
       try{
         const ids=await sql`SELECT o.id FROM offers o JOIN campaign_links c ON o.external_id=c.external_id WHERE c.slug='rosa' AND o.marketplace='Shopee' AND o.status='published' ORDER BY o.id LIMIT 1`;
         if(!ids[0])return;

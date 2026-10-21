@@ -1,4 +1,4 @@
-import {countClick} from '@/lib/click-policy';
+import {countClick,ADMIN_DEVICE_COOKIE} from '@/lib/click-policy';
 import { NextRequest, NextResponse, after } from "next/server";
 import { db } from "@/lib/db";
 export async function GET(req:NextRequest,{params}:{params:Promise<{id:string}>}){
@@ -12,7 +12,7 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{id:string}>}
   const channel=allowedChannels.has(requested)?requested:'vitrine';
   const referrer=req.headers.get('referer')?.slice(0,1000)||null;
   const userAgent=req.headers.get('user-agent')?.slice(0,500)||null;
-  if(countClick(req.headers.get('user-agent'),req.nextUrl.searchParams.get('teste')))after(async()=>{
+  if(countClick(req.headers.get('user-agent'),req.nextUrl.searchParams.get('teste'),req.cookies.get(ADMIN_DEVICE_COOKIE)?.value))after(async()=>{
     try{await sql`INSERT INTO offer_clicks(offer_id,channel,referrer,user_agent,created_at) VALUES(${n},${channel},${referrer},${userAgent},NOW())`;}
     catch{try{await sql`INSERT INTO offer_clicks(offer_id,source,user_agent) VALUES(${n},${channel},${userAgent})`;}catch{console.error('[click-tracking] Falha ao registrar clique',{offerId:n,channel});}}
   });

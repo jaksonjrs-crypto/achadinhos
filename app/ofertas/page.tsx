@@ -1,6 +1,7 @@
 import {cookies} from 'next/headers';
 import {clickChannel,CHANNELS} from '@/lib/click-policy';
 import FollowStrip from '../components/FollowStrip';
+import OfferImage from '../components/OfferImage';
 import { APP_VERSION } from "@/lib/version";
 import {getVitrineHome} from "@/lib/vitrine-home";
 import type { Metadata } from "next";
@@ -15,10 +16,10 @@ export const metadata:Metadata={
 const discountPercent=(o:any)=>o.original_price>o.price&&o.original_price>0?Math.round((1-o.price/o.original_price)*100):0;
 const money=(v:number)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v);
 
-function OfferCard({offer:o,channel}:{offer:any;channel:string}){
+function OfferCard({offer:o,channel,eager=false}:{offer:any;channel:string;eager?:boolean}){
          const discount=o.original_price&&o.original_price>o.price?Math.round((1-o.price/o.original_price)*100):0;
          return <article className="offerCard" >
-           {o.image_url?<img src={o.image_url} alt={o.title} loading="lazy"/>:<div className="placeholder">Vitrine<br/>dos Achados</div>}
+           <OfferImage src={o.image_url} alt={o.title} eager={eager}/>
            <div className="offerBody">
              <div className="meta"><span>{o.marketplace}</span>{discount>0&&<b className="discountBadge">-{discount}%</b>}</div>
              <h3>{o.title}</h3>
@@ -98,7 +99,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
 
     {homeView&&highlights.length>0&&<section aria-label="Produtos em destaque" className="homeHighlights">
       {config.exibir_titulo&&<div className="sectionTitle"><h2 id="highlights-title">{config.titulo}</h2></div>}
-      <div className="offerGrid">{highlights.map(o=><OfferCard key={o.id} offer={o} channel={channel}/>)}</div>
+      <div className="offerGrid">{highlights.map(o=><OfferCard key={o.id} offer={o} channel={channel} eager/>)}</div>
     </section>}
     <section id="ofertas">
       <div className="sectionTitle">
