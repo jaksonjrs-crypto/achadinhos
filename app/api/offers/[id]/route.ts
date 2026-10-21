@@ -24,11 +24,11 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
     if(action==='home_set'){
       const rows=await sql`UPDATE offers SET home_until=NOW()+(${days}::integer*INTERVAL '24 hours') WHERE id=${offerId} AND status='published' RETURNING id`;
       if(!rows.length)return NextResponse.json({error:'Publique a oferta antes de selecionar para a inicial.'},{status:400});
-      savedNote=`Produto selecionado para a inicial por ${days} dias a partir de agora.`;
+      savedNote=`Produto destacado no topo da inicial por ${days} dias a partir de agora.`;
     }else{
-      // Keep an expired timestamp so an empty manual selection never falls back to the automatic catalog.
+      // Remove only the extra highlight; keep the offer published in the catalog.
       await sql`UPDATE offers SET home_until=NOW() WHERE id=${offerId}`;
-      savedNote='Produto retirado da seleção inicial. Continua no catálogo se estiver publicado.';
+      savedNote='Destaque retirado. O produto continua na inicial e no catálogo se estiver publicado.';
     }
   }
   else if(action==="edit"){

@@ -1,6 +1,5 @@
-import {activeHomeOffer} from "@/lib/home-selection";
 import { APP_VERSION } from "@/lib/version";
-import { listPublishedOffers } from "@/lib/offers";
+import { listPublishedOffers, listHomeHighlights } from "@/lib/offers";
 import type { Metadata } from "next";
 
 export const dynamic="force-dynamic";
@@ -12,6 +11,22 @@ export const metadata:Metadata={
 
 const discountPercent=(o:any)=>o.original_price>o.price&&o.original_price>0?Math.round((1-o.price/o.original_price)*100):0;
 const money=(v:number)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v);
+
+function OfferCard({offer:o}:{offer:any}){
+         const discount=o.original_price&&o.original_price>o.price?Math.round((1-o.price/o.original_price)*100):0;
+         return <article className="offerCard" >
+           {o.image_url?<img src={o.image_url} alt={o.title} loading="lazy"/>:<div className="placeholder">Vitrine<br/>dos Achados</div>}
+           <div className="offerBody">
+             <div className="meta"><span>{o.marketplace}</span>{discount>0&&<b className="discountBadge">-{discount}%</b>}</div>
+             <h3>{o.title}</h3>
+             {o.original_price&&o.original_price>o.price&&<del>{money(o.original_price)}</del>}
+             <strong>{money(o.price)}</strong>
+             {o.last_synced_at&&<small className="priceVerified">Preço verificado recentemente</small>}
+             <a className="cta" href={`/go/${o.id}?channel=vitrine`} target="_blank" rel="sponsored nofollow noopener" aria-label={`Ver oferta de ${o.title}`}>Ver oferta</a>
+           </div>
+         </article>
+
+}
 
 export default async function OfertasPage({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){
   const params=await searchParams;
@@ -29,13 +44,15 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
   };
   const order=["relevancia","menor-preco","maior-desconto","recentes"].includes(params.ordem||"")?params.ordem!:"relevancia";
   const buscaNorm=busca.toLocaleLowerCase("pt-BR");
-  let offers:any[]=[]; let unavailable=false;
-  try{offers=await listPublishedOffers()}catch{unavailable=true}
-  const categories=Array.from(new Set(offers.map((o:any)=>String(o.category||"").trim()).filter((c:string)=>Boolean(c)&&!marketplaces.some(m=>m.toLocaleLowerCase("pt-BR")===c.toLocaleLowerCase("pt-BR"))))).sort();
-  const homeManaged=offers.some(o=>o.home_managed);
-  const homeView=homeManaged&&!selected&&!marketplace&&!busca&&params.todos!=='1';
-  const source=homeView?offers.filter(o=>activeHomeOffer(o)):offers;
-  let visible=selected?offers.filter((o:any)=>String(o.category||"")===selected):source;
+  const homeView=!selected&&!marketplace&&!busca&&params.todos!=='1';
+  const [catalogResult, highlightResult]=await Promise.allSettled([
+    listPublishedOffers(), homeView?listHomeHighlights():Promise.resolve([])
+  ]);
+  const unavailable=catalogResult.status==='rejected';
+  const offers=catalogResult.status==='fulfilled'?catalogResult.value:[];
+  const highlights=highlightResult.status==='fulfilled'?highlightResult.value:[];
+  const categories=Array.from(new Set(offers.map(o=>String(o.category||"").trim()).filter(c=>Boolean(c)&&!marketplaces.some(m=>m.toLocaleLowerCase("pt-BR")===c.toLocaleLowerCase("pt-BR"))))).sort();
+  let visible=selected?offers.filter(o=>String(o.category||"")===selected):offers;
   if(marketplace)visible=visible.filter((o:any)=>String(o.marketplace||"").trim().toLocaleLowerCase("pt-BR")===marketplace.toLocaleLowerCase("pt-BR"));
   if(buscaNorm) visible=visible.filter((o:any)=>`${o.title} ${o.category} ${o.marketplace}`.toLocaleLowerCase("pt-BR").includes(buscaNorm));
 
@@ -77,9 +94,13 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
       </div>
     </section>
 
+    {homeView&&highlights.length>0&&<section aria-labelledby="highlights-title" className="homeHighlights">
+      <div className="sectionTitle"><div><span className="eyebrow">SELEÇÃO ESPECIAL</span><h2 id="highlights-title">Destaques da Vitrine</h2></div></div>
+      <div className="offerGrid">{highlights.map(o=><OfferCard key={o.id} offer={o}/>)}</div>
+    </section>}
     <section id="ofertas">
       <div className="sectionTitle">
-        <div><span className="eyebrow">VITRINE</span><h2>{busca?`Resultados para “${busca}”`:marketplace?marketplace:selected?selected:homeView?"Selecionados para você":"Achados de hoje"}</h2></div>
+        <div><span className="eyebrow">VITRINE</span><h2>{busca?`Resultados para “${busca}”`:marketplace?marketplace:selected?selected:"Todas as ofertas"}</h2></div>
         <span>{visible.length} oferta{visible.length===1?"":"s"}</span>
       </div>
       <div className="catalogToolbar">
@@ -99,21 +120,8 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
       <p className="affiliateNotice">Transparência: os botões “Ver oferta” podem usar links de afiliado. Podemos receber comissão pela compra, sem custo adicional para você.</p>
 
       {unavailable?<div className="empty"><b>Vitrine temporariamente indisponível.</b><br/>Tente novamente mais tarde.</div>:
-       visible.length===0?<div className="empty"><b>{busca?"Nenhum achado encontrado.":selected||marketplace?"Nenhuma oferta nesta seleção agora.":homeView?"Nossa seleção está sendo renovada.":"A primeira seleção está chegando."}</b><br/>{busca?"Tente outro termo ou limpe a busca.":selected||marketplace?"Escolha outra opção do menu para continuar.":homeView?<a href="/ofertas?todos=1#ofertas">Ver todas as ofertas →</a>:"As ofertas aprovadas aparecerão aqui automaticamente."}</div>:
-       <div className="offerGrid">{pageOffers.map((o:any)=>{
-         const discount=o.original_price&&o.original_price>o.price?Math.round((1-o.price/o.original_price)*100):0;
-         return <article className="offerCard" key={o.id}>
-           {o.image_url?<img src={o.image_url} alt={o.title} loading="lazy"/>:<div className="placeholder">Vitrine<br/>dos Achados</div>}
-           <div className="offerBody">
-             <div className="meta"><span>{o.marketplace}</span>{discount>0&&<b className="discountBadge">-{discount}%</b>}</div>
-             <h3>{o.title}</h3>
-             {o.original_price&&o.original_price>o.price&&<del>{money(o.original_price)}</del>}
-             <strong>{money(o.price)}</strong>
-             {o.last_synced_at&&<small className="priceVerified">Preço verificado recentemente</small>}
-             <a className="cta" href={`/go/${o.id}?channel=vitrine`} target="_blank" rel="sponsored nofollow noopener" aria-label={`Ver oferta de ${o.title}`}>Ver oferta</a>
-           </div>
-         </article>
-       })}</div>}
+       visible.length===0?<div className="empty"><b>{busca?"Nenhum achado encontrado.":selected||marketplace?"Nenhuma oferta nesta seleção agora.":"A primeira seleção está chegando."}</b><br/>{busca?"Tente outro termo ou limpe a busca.":selected||marketplace?"Escolha outra opção do menu para continuar.":"As ofertas aprovadas aparecerão aqui automaticamente."}</div>:
+       <div className="offerGrid">{pageOffers.map(o=><OfferCard key={o.id} offer={o}/>)}</div>}
       {visible.length>0&&<nav className="catalogPagination" aria-label="Páginas de ofertas">
         {page>1?<a href={pageUrl(page-1)} rel="prev">← Anterior</a>:<span aria-disabled="true">← Anterior</span>}
         <span className="pagePosition">Página {page} de {totalPages}</span>
