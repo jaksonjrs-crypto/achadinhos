@@ -1,5 +1,6 @@
 import {ensureAffiliateRegistry} from "./affiliate-registry";
 import { db } from "./db";
+import {BOT_PATTERN} from "./click-policy";
 
 export type Offer = {
   id:number; title:string; category:string; marketplace:string; image_url:string|null;
@@ -54,4 +55,16 @@ export async function listAllOffers():Promise<Offer[]>{
   const rows=await sql`SELECT to_jsonb(offers)->>'perfil' AS perfil,home_until,affiliate_status,affiliate_sub_id,affiliate_note,id,title,category,marketplace,image_url,price,original_price,affiliate_url,status,featured,created_at,updated_at,external_id,product_id,opportunity_score,last_synced_at,sync_status
     FROM offers ORDER BY updated_at DESC`;
   return rows.map(map) as Offer[];
+}
+
+// v3.5.11 — "Mais clicados da semana": ofertas publicadas com mais cliques reais
+// (sem robôs) nos últimos 7 dias. Cliques de teste e do admin já não são gravados.
+export async function listTopClickedOffers(limit=8):Promise<(Offer&{week_clicks:number})[]>{
+  const sql=db();
+  const rows=await sql`SELECT to_jsonb(o)->>'perfil' AS perfil,o.id,o.title,o.category,o.marketplace,o.image_url,o.price,o.original_price,o.affiliate_url,o.status,o.featured,o.created_at,o.updated_at,o.external_id,o.product_id,o.opportunity_score,o.last_synced_at,o.sync_status,
+      COUNT(c.*)::int AS week_clicks
+    FROM offers o JOIN offer_clicks c ON c.offer_id=o.id
+    WHERE o.status='published' AND c.created_at>=NOW()-INTERVAL '7 days' AND COALESCE(c.user_agent,'') !~* ${BOT_PATTERN}
+    GROUP BY o.id ORDER BY week_clicks DESC,o.updated_at DESC LIMIT ${limit*2}`;
+  return uniqueOffers(rows.map(r=>({...map(r),week_clicks:Number(r.week_clicks)})) as any).filter((o:any)=>o.week_clicks>=2).slice(0,limit) as any;
 }

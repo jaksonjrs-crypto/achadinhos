@@ -496,3 +496,36 @@
 .campaignSettings form{display:grid;gap:12px;padding:14px;background:#fff;color:#172033;border-radius:8px}.campaignSettings label{display:block}.campaignSettings input:not([type=checkbox]){display:block;width:100%;padding:10px;background:#fff;color:#172033;border:1px solid #64748b;border-radius:6px}.campaignSettings input[type=checkbox]{width:auto;margin-right:8px}.campaignSettings button{background:#087b7c;color:white;padding:12px;border-radius:6px}
 
 .followStrip{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:12px;background:#eaf7f3;color:#133e40;font-size:13px}.followStrip a{padding:8px 12px;border-radius:8px;background:#087b7c;color:white;text-decoration:none}.miningProfiles form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;padding:12px}.miningProfiles label{display:grid;gap:5px}.miningProfiles input,.miningProfiles textarea{background:white;color:#172033;max-width:100%;padding:8px}.miningProfiles input[type=checkbox]{width:20px}.scoreReason{color:#087b7c;font-weight:700}
+
+/* v3.5.11 — layout da Vitrine: chamada no celular, prateleiras deslizantes, categorias com ícones */
+.metricGrid small{display:block;margin-top:4px;color:#68706c;font-size:12px}
+.store .marketplaceHero h1{color:var(--ink)}
+.store .cats a.seasonCat{border-color:#ffb08e;background:#fff3ec;color:#a83b0d}
+.store .cats a.seasonCat.activeCat{background:var(--orange);border-color:var(--orange);color:#fff}
+.homeShelf{margin:6px 0 18px}
+.shelfTitle{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-top:1px solid #e3e6e3;padding-top:14px}
+.shelfTitle h2{font-size:24px;margin:3px 0}
+.shelfTitle span{font-size:12px;font-weight:700;color:#637069}
+.shelfTrack{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 4*11px)/5);gap:11px;overflow-x:auto;scroll-snap-type:x mandatory;padding:10px 2px 8px;scrollbar-width:thin}
+.shelfTrack>.offerCard{scroll-snap-align:start}
+.offerCard{position:relative}
+.rankBadge{position:absolute;top:8px;left:8px;z-index:1;background:var(--ink);color:#fff;font-weight:900;font-size:12px;border-radius:999px;padding:4px 9px}
+.homeShelf.shelfTop .rankBadge{background:var(--orange)}
+.sortChips{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:8px 0 4px}
+.sortChips::-webkit-scrollbar{display:none}
+.sortChips a{white-space:nowrap;font-size:12px;font-weight:700;border:1px solid #d6ddd8;background:#fff;color:var(--ink);border-radius:999px;padding:7px 12px}
+.sortChips a.activeSort{background:var(--ink);border-color:var(--ink);color:#fff}
+.loadMore{display:grid;justify-items:center;gap:10px;padding:4px 0 18px}
+.loadMore p{margin:0;font-size:12px;color:#637069}
+.loadMoreBtn{background:#fff;border:2px solid var(--brand);color:var(--brand)!important;font-weight:800;border-radius:999px;padding:12px 26px}
+.loadMoreBtn:hover{background:#e7f4ee}
+.store .offerCard[id]{scroll-margin-top:12px}
+.store .priceVerified{display:none}
+@media(max-width:1050px){.shelfTrack{grid-auto-columns:calc((100% - 2*11px)/3)}}
+@media(max-width:760px){
+  .store .marketplaceHero .eyebrow{display:none}
+  .store .marketplaceHero h1{display:block;font-size:22px;line-height:1.15;margin:6px 0 3px}
+  .store .marketplaceHero p{display:block;font-size:12.5px;line-height:1.35;margin:0 0 6px;color:#4d5752}
+  .shelfTrack{grid-auto-columns:44%;gap:9px;margin:0 -11px;padding:8px 11px 8px;scroll-padding:0 11px}
+  .shelfTitle h2{font-size:19px}
+}

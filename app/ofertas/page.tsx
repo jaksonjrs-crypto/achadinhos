@@ -1,9 +1,9 @@
 import {cookies} from 'next/headers';
 import {clickChannel,CHANNELS} from '@/lib/click-policy';
-import FollowStrip from '../components/FollowStrip';
 import OfferImage from '../components/OfferImage';
 import { APP_VERSION } from "@/lib/version";
 import {getVitrineHome} from "@/lib/vitrine-home";
+import {categoryIcon,isKids,KIDS_CATEGORY,activeSeasons,SORTS,PAGE_STEP,shownCount} from "@/lib/vitrine-layout";
 import type { Metadata } from "next";
 
 export const dynamic="force-dynamic";
@@ -16,20 +16,26 @@ export const metadata:Metadata={
 const discountPercent=(o:any)=>o.original_price>o.price&&o.original_price>0?Math.round((1-o.price/o.original_price)*100):0;
 const money=(v:number)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v);
 
-function OfferCard({offer:o,channel,eager=false}:{offer:any;channel:string;eager?:boolean}){
-         const discount=o.original_price&&o.original_price>o.price?Math.round((1-o.price/o.original_price)*100):0;
-         return <article className="offerCard" >
-           <OfferImage src={o.image_url} alt={o.title} eager={eager}/>
-           <div className="offerBody">
-             <div className="meta"><span>{o.marketplace}</span>{discount>0&&<b className="discountBadge">-{discount}%</b>}</div>
-             <h3>{o.title}</h3>
-             {o.original_price&&o.original_price>o.price&&<del>{money(o.original_price)}</del>}
-             <strong>{money(o.price)}</strong>
-             {o.last_synced_at&&<small className="priceVerified">Preço verificado recentemente</small>}
-             <a className="cta" href={`/go/${o.id}?channel=${channel}`} target="_blank" rel="sponsored nofollow noopener" aria-label={`Ver oferta de ${o.title}`}>Ver oferta</a>
-           </div>
-         </article>
+function OfferCard({offer:o,channel,eager=false,anchor,rank}:{offer:any;channel:string;eager?:boolean;anchor?:string;rank?:number}){
+  const discount=o.original_price&&o.original_price>o.price?Math.round((1-o.price/o.original_price)*100):0;
+  return <article className="offerCard" id={anchor}>
+    {rank&&<span className="rankBadge" aria-label={`${rank}º mais clicado`}>#{rank}</span>}
+    <OfferImage src={o.image_url} alt={o.title} eager={eager}/>
+    <div className="offerBody">
+      <div className="meta"><span>{o.marketplace}</span>{discount>0&&<b className="discountBadge">-{discount}%</b>}</div>
+      <h3>{o.title}</h3>
+      {o.original_price&&o.original_price>o.price&&<del>{money(o.original_price)}</del>}
+      <strong>{money(o.price)}</strong>
+      <a className="cta" href={`/go/${o.id}?channel=${channel}`} target="_blank" rel="sponsored nofollow noopener" aria-label={`Ver oferta de ${o.title}`}>Ver oferta</a>
+    </div>
+  </article>
+}
 
+function Shelf({title,label,offers,channel,ranked=false,id}:{title?:string;label:string;offers:any[];channel:string;ranked?:boolean;id:string}){
+  return <section aria-label={label} className={`homeShelf ${id}`}>
+    {title&&<div className="shelfTitle"><h2>{title}</h2>{offers.length>2&&<span aria-hidden="true">deslize →</span>}</div>}
+    <div className="shelfTrack">{offers.map((o,i)=><OfferCard key={o.id} offer={o} channel={channel} eager={i<3} rank={ranked?i+1:undefined}/>)}</div>
+  </section>
 }
 
 export default async function OfertasPage({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){
@@ -39,100 +45,75 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
   const marketplace=String(params.marketplace||"").trim();
   const marketplaces=["Shopee","Mercado Livre"];
   const busca=String(params.busca||"").trim();
-  const menuUrl=(category="",market="",search=busca)=>{
+  const order=SORTS.some(o=>o.key===params.ordem)?params.ordem!:"relevancia";
+  const homeView=!selected&&!marketplace&&!busca;
+  const link=(over:Record<string,string|undefined>,hash="#ofertas")=>{
+    const base:Record<string,string|undefined>={categoria:selected||undefined,marketplace:marketplace||undefined,busca:busca||undefined,ordem:order!=="relevancia"?order:undefined,...over};
     const query=new URLSearchParams();
-    if(!category&&!market&&!search)query.set("todos","1");
-    if(category)query.set("categoria",category);
-    if(market)query.set("marketplace",market);
-    if(search)query.set("busca",search);
-    return `/ofertas${query.size?`?${query.toString()}`:""}#ofertas`;
+    for(const [k,v] of Object.entries(base))if(v)query.set(k,v);
+    return `/ofertas${query.size?`?${query.toString()}`:""}${hash}`;
   };
-  const order=["relevancia","menor-preco","maior-desconto","recentes"].includes(params.ordem||"")?params.ordem!:"relevancia";
   const buscaNorm=busca.toLocaleLowerCase("pt-BR");
-  const homeView=!selected&&!marketplace&&!busca&&params.todos!=='1';
-  let data:Awaited<ReturnType<typeof getVitrineHome>>={todas:[],destaques:[],config:{titulo:'Selecionados para você',exibir_titulo:true,destaque_ativo:false}};
+  let data:Awaited<ReturnType<typeof getVitrineHome>>={todas:[],destaques:[],maisClicados:[],config:{titulo:'Selecionados para você',exibir_titulo:true,destaque_ativo:false}};
   let unavailable=false;
   try{data=await getVitrineHome()}catch{unavailable=true}
-  const offers=data.todas,highlights=data.destaques,config=data.config;
-  const categories=Array.from(new Set(offers.map(o=>String(o.category||"").trim()).filter(c=>Boolean(c)&&!marketplaces.some(m=>m.toLocaleLowerCase("pt-BR")===c.toLocaleLowerCase("pt-BR"))))).sort();
-  let visible=selected?offers.filter(o=>String(o.category||"")===selected):offers;
+  const offers=data.todas,highlights=data.destaques,config=data.config,topClicked=(data as any).maisClicados||[];
+  const seasons=activeSeasons().filter(s=>offers.some(s.match));
+  const season=seasons.find(s=>s.key===selected);
+  const realCats=Array.from(new Set(offers.map(o=>String(o.category||"").trim()).filter(c=>Boolean(c)&&!marketplaces.some(m=>m.toLocaleLowerCase("pt-BR")===c.toLocaleLowerCase("pt-BR"))))).filter(c=>c!==KIDS_CATEGORY);
+  const hasKids=offers.some(isKids);
+  const catOrder=(c:string)=>c==="Outros"?1:0;
+  const categories=[...(hasKids?[KIDS_CATEGORY]:[]),...realCats.sort((a,b)=>catOrder(a)-catOrder(b)||a.localeCompare(b,"pt-BR"))];
+  let visible=season?offers.filter(season.match):selected===KIDS_CATEGORY?offers.filter(isKids):selected?offers.filter(o=>String(o.category||"")===selected):offers;
   if(marketplace)visible=visible.filter((o:any)=>String(o.marketplace||"").trim().toLocaleLowerCase("pt-BR")===marketplace.toLocaleLowerCase("pt-BR"));
   if(buscaNorm) visible=visible.filter((o:any)=>`${o.title} ${o.category} ${o.marketplace}`.toLocaleLowerCase("pt-BR").includes(buscaNorm));
 
   if(order==="menor-preco")visible=[...visible].sort((a,b)=>a.price-b.price);
   if(order==="maior-desconto")visible=[...visible].sort((a,b)=>discountPercent(b)-discountPercent(a));
   if(order==="recentes")visible=[...visible].sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime());
-  const pageSize=12;
-  const totalPages=Math.max(1,Math.ceil(visible.length/pageSize));
-  const requestedPage=Number(params.pagina);
-  const page=Math.min(totalPages,Number.isSafeInteger(requestedPage)&&requestedPage>0?requestedPage:1);
-  const pageOffers=visible.slice((page-1)*pageSize,page*pageSize);
-  const pageUrl=(n:number)=>{
-    const query=new URLSearchParams();
-    if(params.todos==='1')query.set("todos","1");
-    if(selected)query.set("categoria",selected);
-    if(marketplace)query.set("marketplace",marketplace);
-    if(busca)query.set("busca",busca);
-    if(order!=="relevancia")query.set("ordem",order);
-    query.set("pagina",String(n));
-    return `/ofertas?${query.toString()}#ofertas`;
-  };
+  const shown=shownCount(params,visible.length);
+  const shownOffers=visible.slice(0,shown);
+  const remaining=visible.length-shown;
+  const title=busca?`Resultados para “${busca}”`:season?season.label:marketplace?marketplace:selected?`${categoryIcon(selected)} ${selected}`:"Todas as ofertas";
 
-  return <main className="store"><FollowStrip/>
+  return <main className="store">
     <section className="hero marketplaceHero">
       <span className="eyebrow">ACHADOS QUE VALEM A PENA</span>
-      <h1>Encontre boas ofertas em um só lugar.</h1>
-      <p>Seleção de produtos para casa, cozinha, pet e organização.</p>
+      <h1>Achados com preço baixo, escolhidos a dedo 🔥</h1>
+      <p>Ofertas da Shopee e do Mercado Livre para casa, cozinha e família, atualizadas todos os dias.</p>
       <form className="storeSearch" action="/ofertas" method="get">
-          {selected&&<input type="hidden" name="categoria" value={selected}/>}{marketplace&&<input type="hidden" name="marketplace" value={marketplace}/>}
           <input name="busca" defaultValue={busca} placeholder="Buscar um achado..." aria-label="Buscar ofertas"/>
           <button type="submit">Buscar</button>
-          {busca&&<a href={menuUrl(selected,marketplace,"")}>Limpar</a>}
+          {busca&&<a href="/ofertas#ofertas">Limpar</a>}
         </form>
-        <div className="cats">
-        <a href="/ofertas#ofertas" className={homeView?"activeCat":""}>Inicial</a>
-        <a className={!homeView&&!selected&&!marketplace?"activeCat":""} href={menuUrl()}>Todos</a>
-        {marketplaces.map(m=><a className={marketplace===m?"activeCat":""} aria-current={marketplace===m?"page":undefined} key={m} href={menuUrl("",m)}>{m}</a>)}
-        {categories.map((c:any)=><a className={selected===c&&!marketplace?"activeCat":""} key={c} href={menuUrl(c)}>{c}</a>)}
-      </div>
+        <nav className="cats" aria-label="Categorias">
+        <a href="/ofertas" className={homeView?"activeCat":""} aria-current={homeView?"page":undefined}>⭐ Tudo</a>
+        {seasons.map(s=><a className={`seasonCat${selected===s.key?" activeCat":""}`} key={s.key} href={`/ofertas?categoria=${s.key}#ofertas`}>{s.label}</a>)}
+        {categories.map(c=><a className={selected===c?"activeCat":""} aria-current={selected===c?"page":undefined} key={c} href={`/ofertas?categoria=${encodeURIComponent(c)}#ofertas`}>{categoryIcon(c)} {c}</a>)}
+      </nav>
     </section>
 
-    {homeView&&highlights.length>0&&<section aria-label="Produtos em destaque" className="homeHighlights">
-      {config.exibir_titulo&&<div className="sectionTitle"><h2 id="highlights-title">{config.titulo}</h2></div>}
-      <div className="offerGrid">{highlights.map(o=><OfferCard key={o.id} offer={o} channel={channel} eager/>)}</div>
-    </section>}
+    {homeView&&highlights.length>0&&<div className="homeHighlights"><Shelf id="shelfHighlights" label="Produtos em destaque" title={config.exibir_titulo?config.titulo:undefined} offers={highlights} channel={channel}/></div>}
+    {homeView&&topClicked.length>=3&&<Shelf id="shelfTop" label="Mais clicados da semana" title="🔥 Mais clicados da semana" offers={topClicked} channel={channel} ranked/>}
     <section id="ofertas">
       <div className="sectionTitle">
-        <div><span className="eyebrow">VITRINE</span><h2>{busca?`Resultados para “${busca}”`:marketplace?marketplace:selected?selected:"Todas as ofertas"}</h2></div>
+        <div><span className="eyebrow">VITRINE</span><h2>{title}</h2></div>
         <span>{visible.length} oferta{visible.length===1?"":"s"}</span>
       </div>
-      <div className="catalogToolbar">
-        <p role="status">{visible.length>0?`${(page-1)*pageSize+1}–${Math.min(page*pageSize,visible.length)} de ${visible.length} ofertas`:"Explore nossa seleção"}</p>
-        <form action="/ofertas#ofertas" method="get">
-          {selected&&<input type="hidden" name="categoria" value={selected}/>}
-          {marketplace&&<input type="hidden" name="marketplace" value={marketplace}/>}
-          {busca&&<input type="hidden" name="busca" value={busca}/>}
-          {params.todos==='1'&&<input type="hidden" name="todos" value="1"/>}
-          <label htmlFor="catalogOrder">Ordenar</label>
-          <select id="catalogOrder" name="ordem" defaultValue={order}>
-            <option value="relevancia">Recomendados</option><option value="menor-preco">Menor preço</option>
-            <option value="maior-desconto">Maior desconto</option><option value="recentes">Novidades</option>
-          </select><button type="submit">Aplicar</button>
-        </form>
-      </div>
-      <p className="affiliateNotice">Transparência: os botões “Ver oferta” podem usar links de afiliado. Podemos receber comissão pela compra, sem custo adicional para você.</p>
+      <nav className="sortChips" aria-label="Ordenar ofertas">
+        {SORTS.map(s=><a key={s.key} className={order===s.key?"activeSort":""} aria-current={order===s.key?"true":undefined} href={link({ordem:s.key==="relevancia"?undefined:s.key})}>{s.label}</a>)}
+      </nav>
 
       {unavailable?<div className="empty"><b>Vitrine temporariamente indisponível.</b><br/>Tente novamente mais tarde.</div>:
        visible.length===0?<div className="empty"><b>{busca?"Nenhum achado encontrado.":selected||marketplace?"Nenhuma oferta nesta seleção agora.":"A primeira seleção está chegando."}</b><br/>{busca?"Tente outro termo ou limpe a busca.":selected||marketplace?"Escolha outra opção do menu para continuar.":"As ofertas aprovadas aparecerão aqui automaticamente."}</div>:
-       <div className="offerGrid">{pageOffers.map(o=><OfferCard key={o.id} offer={o} channel={channel}/>)}</div>}
-      {visible.length>0&&<nav className="catalogPagination" aria-label="Páginas de ofertas">
-        {page>1?<a href={pageUrl(page-1)} rel="prev">← Anterior</a>:<span aria-disabled="true">← Anterior</span>}
-        <span className="pagePosition">Página {page} de {totalPages}</span>
-        {page<totalPages?<a href={pageUrl(page+1)} rel="next">Próxima →</a>:<span aria-disabled="true">Próxima →</span>}
-      </nav>}
+       <div className="offerGrid">{shownOffers.map((o,i)=><OfferCard key={o.id} offer={o} channel={channel} anchor={`item-${i+1}`}/>)}</div>}
+      {visible.length>0&&<div className="loadMore">
+        <p role="status">Mostrando {shown} de {visible.length} ofertas</p>
+        {remaining>0&&<a className="loadMoreBtn" href={link({qtd:String(shown+PAGE_STEP)},`#item-${shown+1}`)} rel="next">Ver mais achados ({remaining})</a>}
+      </div>}
+      <p className="affiliateNotice">Transparência: os botões “Ver oferta” podem usar links de afiliado. Podemos receber comissão pela compra, sem custo adicional para você. Os preços são conferidos com frequência, mas podem mudar no marketplace.</p>
     </section>
-    <footer>Vitrine dos Achados · Achados que valem a pena. <span>Preços e disponibilidade podem mudar no marketplace.</span> <a href="/politica-de-privacidade">Política de Privacidade</a></footer>
+    <footer>Vitrine dos Achados · Achados que valem a pena. <a href="/politica-de-privacidade">Política de Privacidade</a></footer>
     <div className="publicVersion">{APP_VERSION}</div>
   </main>
 }
-
