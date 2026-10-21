@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import {validHomeDays} from "@/lib/home-selection";
 import { db } from "@/lib/db";
 import { queueManualOffers } from "@/lib/publication-queue";
 import { productSafetyCheck } from "@/lib/product-safety";
@@ -15,7 +16,22 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
   const action=String(form.get("action")||"");
   const sql=db();
   let savedNote='';
-  if(action==="edit"){
+  if(action==='home_set'||action==='home_remove'){
+    if(req.headers.get('origin')!==req.nextUrl.origin)return NextResponse.json({error:'Origem inválida.'},{status:403});
+    const days=Number(form.get('days'));
+    if(action==='home_set'&&!validHomeDays(days))return NextResponse.json({error:'Escolha 5, 10, 15, 20 ou 30 dias.'},{status:400});
+    await ensureAffiliateRegistry();
+    if(action==='home_set'){
+      const rows=await sql`UPDATE offers SET home_until=NOW()+(${days}::integer*INTERVAL '24 hours') WHERE id=${offerId} AND status='published' RETURNING id`;
+      if(!rows.length)return NextResponse.json({error:'Publique a oferta antes de selecionar para a inicial.'},{status:400});
+      savedNote=`Produto selecionado para a inicial por ${days} dias a partir de agora.`;
+    }else{
+      // Keep an expired timestamp so an empty manual selection never falls back to the automatic catalog.
+      await sql`UPDATE offers SET home_until=NOW() WHERE id=${offerId}`;
+      savedNote='Produto retirado da seleção inicial. Continua no catálogo se estiver publicado.';
+    }
+  }
+  else if(action==="edit"){
     const title=String(form.get("title")||"").trim(), category=String(form.get("category")||"Casa").trim();
     const marketplace=String(form.get("marketplace")||"Outro").trim(), image=String(form.get("image_url")||"").trim();
     let affiliate=String(form.get("affiliate_url")||"").trim();

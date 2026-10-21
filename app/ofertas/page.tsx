@@ -1,3 +1,4 @@
+import {activeHomeOffer} from "@/lib/home-selection";
 import { APP_VERSION } from "@/lib/version";
 import { listPublishedOffers } from "@/lib/offers";
 import type { Metadata } from "next";
@@ -20,6 +21,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
   const busca=String(params.busca||"").trim();
   const menuUrl=(category="",market="",search=busca)=>{
     const query=new URLSearchParams();
+    if(!category&&!market&&!search)query.set("todos","1");
     if(category)query.set("categoria",category);
     if(market)query.set("marketplace",market);
     if(search)query.set("busca",search);
@@ -30,7 +32,10 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
   let offers:any[]=[]; let unavailable=false;
   try{offers=await listPublishedOffers()}catch{unavailable=true}
   const categories=Array.from(new Set(offers.map((o:any)=>String(o.category||"").trim()).filter((c:string)=>Boolean(c)&&!marketplaces.some(m=>m.toLocaleLowerCase("pt-BR")===c.toLocaleLowerCase("pt-BR"))))).sort();
-  let visible=selected?offers.filter((o:any)=>String(o.category||"")===selected):offers;
+  const homeManaged=offers.some(o=>o.home_managed);
+  const homeView=homeManaged&&!selected&&!marketplace&&!busca&&params.todos!=='1';
+  const source=homeView?offers.filter(o=>activeHomeOffer(o)):offers;
+  let visible=selected?offers.filter((o:any)=>String(o.category||"")===selected):source;
   if(marketplace)visible=visible.filter((o:any)=>String(o.marketplace||"").trim().toLocaleLowerCase("pt-BR")===marketplace.toLocaleLowerCase("pt-BR"));
   if(buscaNorm) visible=visible.filter((o:any)=>`${o.title} ${o.category} ${o.marketplace}`.toLocaleLowerCase("pt-BR").includes(buscaNorm));
 
@@ -44,6 +49,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
   const pageOffers=visible.slice((page-1)*pageSize,page*pageSize);
   const pageUrl=(n:number)=>{
     const query=new URLSearchParams();
+    if(params.todos==='1')query.set("todos","1");
     if(selected)query.set("categoria",selected);
     if(marketplace)query.set("marketplace",marketplace);
     if(busca)query.set("busca",busca);
@@ -64,7 +70,8 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
           {busca&&<a href={menuUrl(selected,marketplace,"")}>Limpar</a>}
         </form>
         <div className="cats">
-        <a className={!selected&&!marketplace?"activeCat":""} href={menuUrl()}>Todos</a>
+        <a href="/ofertas#ofertas" className={homeView?"activeCat":""}>Inicial</a>
+        <a className={!homeView&&!selected&&!marketplace?"activeCat":""} href={menuUrl()}>Todos</a>
         {marketplaces.map(m=><a className={marketplace===m?"activeCat":""} aria-current={marketplace===m?"page":undefined} key={m} href={menuUrl("",m)}>{m}</a>)}
         {categories.map((c:any)=><a className={selected===c&&!marketplace?"activeCat":""} key={c} href={menuUrl(c)}>{c}</a>)}
       </div>
@@ -72,7 +79,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
 
     <section id="ofertas">
       <div className="sectionTitle">
-        <div><span className="eyebrow">VITRINE</span><h2>{busca?`Resultados para “${busca}”`:marketplace?marketplace:selected?selected:"Achados de hoje"}</h2></div>
+        <div><span className="eyebrow">VITRINE</span><h2>{busca?`Resultados para “${busca}”`:marketplace?marketplace:selected?selected:homeView?"Selecionados para você":"Achados de hoje"}</h2></div>
         <span>{visible.length} oferta{visible.length===1?"":"s"}</span>
       </div>
       <div className="catalogToolbar">
@@ -81,6 +88,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
           {selected&&<input type="hidden" name="categoria" value={selected}/>}
           {marketplace&&<input type="hidden" name="marketplace" value={marketplace}/>}
           {busca&&<input type="hidden" name="busca" value={busca}/>}
+          {params.todos==='1'&&<input type="hidden" name="todos" value="1"/>}
           <label htmlFor="catalogOrder">Ordenar</label>
           <select id="catalogOrder" name="ordem" defaultValue={order}>
             <option value="relevancia">Recomendados</option><option value="menor-preco">Menor preço</option>
@@ -91,7 +99,7 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
       <p className="affiliateNotice">Transparência: os botões “Ver oferta” podem usar links de afiliado. Podemos receber comissão pela compra, sem custo adicional para você.</p>
 
       {unavailable?<div className="empty"><b>Vitrine temporariamente indisponível.</b><br/>Tente novamente mais tarde.</div>:
-       visible.length===0?<div className="empty"><b>{busca?"Nenhum achado encontrado.":selected||marketplace?"Nenhuma oferta nesta seleção agora.":"A primeira seleção está chegando."}</b><br/>{busca?"Tente outro termo ou limpe a busca.":selected||marketplace?"Escolha outra opção do menu para continuar.":"As ofertas aprovadas aparecerão aqui automaticamente."}</div>:
+       visible.length===0?<div className="empty"><b>{busca?"Nenhum achado encontrado.":selected||marketplace?"Nenhuma oferta nesta seleção agora.":homeView?"Nossa seleção está sendo renovada.":"A primeira seleção está chegando."}</b><br/>{busca?"Tente outro termo ou limpe a busca.":selected||marketplace?"Escolha outra opção do menu para continuar.":homeView?<a href="/ofertas?todos=1#ofertas">Ver todas as ofertas →</a>:"As ofertas aprovadas aparecerão aqui automaticamente."}</div>:
        <div className="offerGrid">{pageOffers.map((o:any)=>{
          const discount=o.original_price&&o.original_price>o.price?Math.round((1-o.price/o.original_price)*100):0;
          return <article className="offerCard" key={o.id}>
@@ -116,3 +124,4 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
     <div className="publicVersion">{APP_VERSION}</div>
   </main>
 }
+

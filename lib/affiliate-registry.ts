@@ -13,7 +13,8 @@ export async function ensureAffiliateRegistry(){
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`;
   await sql`ALTER TABLE offers ADD COLUMN IF NOT EXISTS affiliate_status TEXT,
     ADD COLUMN IF NOT EXISTS affiliate_sub_id TEXT,
-    ADD COLUMN IF NOT EXISTS affiliate_note TEXT`;
+    ADD COLUMN IF NOT EXISTS affiliate_note TEXT,
+    ADD COLUMN IF NOT EXISTS home_until TIMESTAMPTZ`;
   return sql;
 }
 export async function registerAffiliateLink(link:string,itemId:string,originalUrl:string,subId:string){

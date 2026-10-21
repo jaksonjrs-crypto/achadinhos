@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict');
+const ts=require('typescript');const fs=require('node:fs');const vm=require('node:vm');
+const out={};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync("lib/home-selection.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:out,Date});
+const now=Date.parse("2026-10-20T12:00:00Z");
+for(const d of [5,10,15,20,30])assert.equal(out.validHomeDays(d),true);
+for(const d of [0,-5,1,7,31,NaN,5.5])assert.equal(out.validHomeDays(d),false);
+assert.equal(out.activeHomeOffer({status:"published",home_until:new Date(now+1).toISOString()},now),true);
+for(const status of ["draft","expired"])assert.equal(out.activeHomeOffer({status,home_until:new Date(now+86400000).toISOString()},now),false);
+for(const until of [null,"invalid",new Date(now).toISOString(),new Date(now-1).toISOString()])assert.equal(out.activeHomeOffer({status:"published",home_until:until},now),false);
+console.log("PASS: permitted durations, expired boundary, invalid dates, unpublished exclusion");
