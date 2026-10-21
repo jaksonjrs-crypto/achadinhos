@@ -1,3 +1,4 @@
+import {getVitrineConfig} from '@/lib/vitrine-config';
 import {HOME_DAYS,activeHomeOffer} from '@/lib/home-selection';
 import {campaignLinks} from '@/lib/campaign-links';
 import ImportOffers from './ImportOffers';
@@ -17,6 +18,7 @@ export default async function Central({searchParams}:{searchParams:Promise<Recor
   const params=await searchParams;
   let offers:any[]=[];try{offers=await listAllOffers()}catch{}
   const all=offers;
+  let vitrineConfig=null;try{vitrineConfig=await getVitrineConfig()}catch{}
   let campaigns:any[]=[];try{campaigns=await campaignLinks()}catch{}
   const q=String(params.q||"").trim().toLowerCase();
   const status=String(params.status||"all");
@@ -76,7 +78,17 @@ export default async function Central({searchParams}:{searchParams:Promise<Recor
         <button type="submit">Salvar link ROSA</button>
       </form>)}
     </details>
-    <details className="newOfferBox"><summary>Como destacar produtos na página inicial</summary><p>Em cada oferta publicada, abra “Destaque na inicial”, escolha 5, 10, 15, 20 ou 30 dias e salve. O prazo começa no salvamento; renovar reinicia a contagem. Os destaques aparecem em uma seção extra no topo. Abaixo, todos os produtos ativos continuam visíveis com paginação, mesmo sem destaques. Ao vencer ou retirar, o produto sai apenas da seção de destaques.</p></details>
+    {params.config_saved==='1'&&<p role="status">Configuração da Vitrine salva.</p>}
+    <details className="newOfferBox campaignSettings"><summary>Configuração da Vitrine — campanha em destaque</summary>
+      {vitrineConfig?<form action="/api/vitrine/config" method="post">
+        <label>Título da seção em destaque<input name="titulo" maxLength={100} defaultValue={vitrineConfig.titulo} placeholder="Ex.: Black Friday, Destaques da Semana, Ofertas de Natal"/></label>
+        <label><input type="checkbox" name="exibir_titulo" defaultChecked={vitrineConfig.exibir_titulo}/> Mostrar título na vitrine</label>
+        <label><input type="checkbox" name="destaque_ativo" defaultChecked={vitrineConfig.destaque_ativo}/> Ativar seção de destaques</label>
+        <p>Título vazio usa “Selecionados para você”. Sem produtos com destaque ativo, título e seção ficam ocultos. Todos os produtos ativos continuam no catálogo abaixo.</p>
+        <button type="submit">Salvar configuração da Vitrine</button>
+      </form>:<p>Configuração indisponível. Atualize a página para tentar novamente.</p>}
+    </details>
+    <details className="newOfferBox"><summary>Como destacar produtos na página inicial</summary><p>Em cada oferta publicada, abra “Destaque na inicial”, escolha 5, 10, 15, 20 ou 30 dias e salve. Ative a seção em Configuração da Vitrine. O prazo começa no salvamento; renovar reinicia a contagem. Os destaques aparecem em uma seção extra no topo. Abaixo, todos os produtos ativos continuam visíveis com paginação, mesmo sem destaques. Ao vencer ou retirar, o produto sai apenas da seção de destaques.</p></details>
     <RepairLinks/>
     <div className="centralActionBar"><SyncCatalogButton/><BatchPublishButton /></div>
     <div className="contentWorkflowActions"><a className="button" href="/divulgacao">Abrir fila de divulgação</a></div>

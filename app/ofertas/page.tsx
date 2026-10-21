@@ -1,5 +1,5 @@
 import { APP_VERSION } from "@/lib/version";
-import { listPublishedOffers, listHomeHighlights } from "@/lib/offers";
+import {getVitrineHome} from "@/lib/vitrine-home";
 import type { Metadata } from "next";
 
 export const dynamic="force-dynamic";
@@ -45,12 +45,10 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
   const order=["relevancia","menor-preco","maior-desconto","recentes"].includes(params.ordem||"")?params.ordem!:"relevancia";
   const buscaNorm=busca.toLocaleLowerCase("pt-BR");
   const homeView=!selected&&!marketplace&&!busca&&params.todos!=='1';
-  const [catalogResult, highlightResult]=await Promise.allSettled([
-    listPublishedOffers(), homeView?listHomeHighlights():Promise.resolve([])
-  ]);
-  const unavailable=catalogResult.status==='rejected';
-  const offers=catalogResult.status==='fulfilled'?catalogResult.value:[];
-  const highlights=highlightResult.status==='fulfilled'?highlightResult.value:[];
+  let data:Awaited<ReturnType<typeof getVitrineHome>>={todas:[],destaques:[],config:{titulo:'Selecionados para você',exibir_titulo:true,destaque_ativo:false}};
+  let unavailable=false;
+  try{data=await getVitrineHome()}catch{unavailable=true}
+  const offers=data.todas,highlights=data.destaques,config=data.config;
   const categories=Array.from(new Set(offers.map(o=>String(o.category||"").trim()).filter(c=>Boolean(c)&&!marketplaces.some(m=>m.toLocaleLowerCase("pt-BR")===c.toLocaleLowerCase("pt-BR"))))).sort();
   let visible=selected?offers.filter(o=>String(o.category||"")===selected):offers;
   if(marketplace)visible=visible.filter((o:any)=>String(o.marketplace||"").trim().toLocaleLowerCase("pt-BR")===marketplace.toLocaleLowerCase("pt-BR"));
@@ -94,8 +92,8 @@ export default async function OfertasPage({searchParams}:{searchParams:Promise<R
       </div>
     </section>
 
-    {homeView&&highlights.length>0&&<section aria-labelledby="highlights-title" className="homeHighlights">
-      <div className="sectionTitle"><div><span className="eyebrow">SELEÇÃO ESPECIAL</span><h2 id="highlights-title">Destaques da Vitrine</h2></div></div>
+    {homeView&&highlights.length>0&&<section aria-label="Produtos em destaque" className="homeHighlights">
+      {config.exibir_titulo&&<div className="sectionTitle"><h2 id="highlights-title">{config.titulo}</h2></div>}
       <div className="offerGrid">{highlights.map(o=><OfferCard key={o.id} offer={o}/>)}</div>
     </section>}
     <section id="ofertas">
