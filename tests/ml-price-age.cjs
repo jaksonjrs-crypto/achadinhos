@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),ts=require('typescript'),Module=require('module');
+const root=path.resolve(__dirname,'..'),f=path.join(root,'lib/ml-price-refresh.ts'),mod=new Module(f);mod.filename=f;
+mod._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,f);const out=mod.exports;
+const now=new Date('2026-10-22T15:00:00Z'),day=86400000,ago=d=>new Date(now.getTime()-d*day).toISOString();
+assert.equal(out.isMercadoLivre('Mercado Livre'),true);assert.equal(out.isMercadoLivre(' mercadolivre '),true);assert.equal(out.isMercadoLivre('Shopee'),false);
+assert.deepEqual(out.mlPriceAge({last_synced_at:ago(2)},now),{days:2,stale:false});
+assert.deepEqual(out.mlPriceAge({last_synced_at:ago(7)},now),{days:7,stale:true});
+assert.deepEqual(out.mlPriceAge({created_at:ago(10)},now),{days:10,stale:true},'falls back to creation date');
+assert.deepEqual(out.mlPriceAge({},now),{days:null,stale:true});
+assert.equal(out.priceSyncLabel({marketplace:'Mercado Livre',last_synced_at:ago(0)},now),'✓ preço da lista hoje');
+assert.equal(out.priceSyncLabel({marketplace:'Mercado Livre',last_synced_at:ago(1)},now),'✓ preço da lista há 1 dia');
+assert.equal(out.priceSyncLabel({marketplace:'Mercado Livre',updated_at:ago(9)},now),'⚠ conferir preço (há 9 dias)');
+assert.equal(out.priceSyncLabel({marketplace:'Shopee',sync_status:'ok'},now),'✓ preço verificado');
+assert.equal(out.priceSyncLabel({marketplace:'Shopee',external_id:'1'},now),'aguarda verificação');
+assert.equal(out.priceSyncLabel({marketplace:'Shopee'},now),'precisa vincular');
+(async()=>{
+  const calls=[];const sql=async(s,...v)=>{const q=s.join('?');calls.push(q);if(q.includes('WITH old AS'))return v[0]==='MLB1'?[{id:3,title:'Dino',old_price:'99.9'}]:[];return []};
+  const r=await out.refreshMlPrices(sql,[{externalId:'MLB1',price:89.9,originalPrice:309},{externalId:'MLB2',price:10,originalPrice:null},{externalId:'xx',price:5,originalPrice:null},{externalId:'MLB3',price:0,originalPrice:null}]);
+  assert.equal(r.updated,1);assert.deepEqual(r.changes,[{id:3,title:'Dino',oldPrice:99.9,newPrice:89.9}]);
+  assert.equal(calls.filter(q=>q.includes('WITH old AS')).length,2,'invalid ids and prices are skipped');
+  const same=await out.refreshMlPrices(async(s,...v)=>s.join('?').includes('WITH old AS')?[{id:3,title:'Dino',old_price:89.9}]:[],[{externalId:'MLB1',price:89.9,originalPrice:80}]);
+  assert.equal(same.updated,1);assert.equal(same.changes.length,0);
+  console.log('ml-price-age: ok');
+})().catch(e=>{console.error(e);process.exitCode=1});

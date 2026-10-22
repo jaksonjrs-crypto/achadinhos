@@ -1,14 +1,14 @@
 'use client';
 import {useState} from 'react';
 import type {MlListPreview,MlListProduct} from '@/lib/ml-list-parser';
-type Product=MlListProduct&{profileEligible:boolean;existing:boolean;possibleDuplicate:boolean};
+type Product=MlListProduct&{profileEligible:boolean;existing:boolean;possibleDuplicate:boolean;currentPrice:number|null};
 type Preview=Omit<MlListPreview,'products'>&{products:Product[]};
 const money=(v:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
 
 export default function MercadoLivreImportButton({profileId}:{profileId:string}){
   const [open,setOpen]=useState(false),[file,setFile]=useState<File|null>(null),[preview,setPreview]=useState<Preview|null>(null);
   const [selected,setSelected]=useState<string[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[finished,setFinished]=useState(false);
-  async function submit(action:'preview'|'import'){
+  async function submit(action:'preview'|'import'|'refresh'){
     if(!file)return;
     setBusy(true);setMessage('');
     try{
@@ -17,7 +17,12 @@ export default function MercadoLivreImportButton({profileId}:{profileId:string})
       const r=await fetch('/api/mercadolivre/import-list',{method:'POST',body:form});
       const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Falha ao importar a lista.');
       if(action==='preview'){setPreview(d);setSelected(d.products.filter((p:Product)=>!p.existing&&!p.possibleDuplicate&&p.profileEligible).map((p:Product)=>p.externalId));setFinished(false)}
-      else{setMessage(`${d.imported} produto(s) importado(s) para revisão · ${d.duplicates} já cadastrado(s).`);setFinished(true)}
+      else{
+        const changed=(d.priceChanges||[]).length;
+        const prices=d.priceUpdated?` · Preço renovado em ${d.priceUpdated} oferta(s) já publicada(s)${changed?` (${changed} mudaram)`:''}.`:'';
+        setMessage(action==='refresh'?`Preço renovado em ${d.priceUpdated||0} oferta(s)${changed?` · ${changed} mudaram de preço`:' · nenhum preço mudou'}.`
+          :`${d.imported} produto(s) importado(s) para revisão · ${d.duplicates} já cadastrado(s)${prices}`);
+        setFinished(true)}
     }catch(e:any){setMessage(e?.message||'Não foi possível importar a lista.')}
     finally{setBusy(false)}
   }
@@ -37,10 +42,11 @@ export default function MercadoLivreImportButton({profileId}:{profileId:string})
         <label><input type="checkbox" checked={preview.products.some(p=>!p.existing&&!p.possibleDuplicate&&p.profileEligible)&&preview.products.filter(p=>!p.existing&&!p.possibleDuplicate&&p.profileEligible).every(p=>selected.includes(p.externalId))} onChange={e=>setSelected(e.target.checked?preview.products.filter(p=>!p.existing&&!p.possibleDuplicate&&p.profileEligible).map(p=>p.externalId):[])}/> Selecionar todos os novos</label>
         <div className="mlListProducts">{preview.products.map(p=><label className="mlListProduct" key={p.externalId}>
           <input type="checkbox" disabled={p.existing||busy} checked={selected.includes(p.externalId)} onChange={e=>setSelected(ids=>e.target.checked?[...ids,p.externalId]:ids.filter(id=>id!==p.externalId))}/>
-          <img src={p.imageUrl} alt="" loading="lazy"/><span><b>{p.title}</b><small>{money(p.price)}{p.priceCondition?` · ${p.priceCondition}`:''}{!p.profileEligible?' · Fora do perfil (seleção manual opcional)':''}{p.existing?' · Já cadastrado':p.possibleDuplicate?' · Possível duplicidade: confira o cadastro existente':''}</small></span>
+          <img src={p.imageUrl} alt="" loading="lazy"/><span><b>{p.title}</b><small>{money(p.price)}{p.priceCondition?` · ${p.priceCondition}`:''}{!p.profileEligible?' · Fora do perfil (seleção manual opcional)':''}{p.existing?(p.currentPrice!=null&&Math.abs(p.currentPrice-p.price)>=0.01?` · Já cadastrado · preço no Garimpo ${money(p.currentPrice)} → ${money(p.price)}`:' · Já cadastrado'):p.possibleDuplicate?' · Possível duplicidade: confira o cadastro existente':''}</small></span>
         </label>)}</div>
         <button type="button" className="mini publish" disabled={busy||!selected.length} onClick={()=>submit('import')}>Importar {selected.length} selecionado(s)</button>
-        <p className="muted">Entram em revisão. A publicação ocorre depois da sua aprovação no Garimpo.</p>
+        {preview.products.some(p=>p.currentPrice!=null)&&<button type="button" className="mini" disabled={busy} onClick={()=>submit('refresh')}>Só renovar preços ({preview.products.filter(p=>p.currentPrice!=null).length} já publicada(s))</button>}
+        <p className="muted">Entram em revisão. A publicação ocorre depois da sua aprovação no Garimpo. Ao importar, o preço das ofertas já publicadas desta lista também é renovado.</p>
       </>}
       {finished&&<a className="mini publish" href="/garimpo-inteligente?marketplace=Mercado%20Livre">Ver produtos no Garimpo</a>}
     </section>}
