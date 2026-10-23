@@ -23,17 +23,20 @@ export function similarity(a:string,b:string){
 // Palavras do título que servem de busca (as 6 primeiras significativas).
 export function searchKeyword(title:string){return [...tokens(title)].slice(0,6).join(' ')}
 
-export const RULES={minRating:4.5,minSales:50,priceBand:0.25,minSimilarity:0.5,minGainPct:0.15,minGainBRL:1};
+// O ganho tem de vir da comissão, não de um preço mais alto para o cliente.
+export const RULES={minRating:4.5,minSales:50,priceBand:0.25,maxPriceIncrease:0.05,minSimilarity:0.5,minGainPct:0.15,minGainBRL:1};
 
 // Escolhe o melhor anúncio equivalente que paga mais por venda. Puro, testável.
-export function pickBetterListing(cur:Current,cands:Listing[],rules=RULES):(Listing&{gain:number;similarity:number})|null{
+export function pickBetterListing(cur:Current,cands:Listing[],rules=RULES,taken:Set<string>=new Set()):(Listing&{gain:number;similarity:number})|null{
   if(cur.rate==null||!(cur.price>0))return null;
   const base=cur.rate*cur.price;
   let best:(Listing&{gain:number;similarity:number})|null=null;
   for(const c of cands){
-    if(!c.itemId||c.itemId===cur.itemId)continue;
+    if(!c.itemId||c.itemId===cur.itemId||taken.has(c.itemId))continue;
+    if(!(c.rate>cur.rate))continue;
     if(!(c.rating>=rules.minRating)||!(c.sales>=rules.minSales)||!(c.price>0))continue;
     if(Math.abs(c.price-cur.price)/cur.price>rules.priceBand)continue;
+    if(c.price>cur.price*(1+rules.maxPriceIncrease))continue;
     const sim=similarity(cur.title,c.title);if(sim<rules.minSimilarity)continue;
     const earn=c.rate*c.price,gain=earn-base;
     if(gain<rules.minGainBRL||earn<base*(1+rules.minGainPct))continue;
@@ -64,6 +67,8 @@ export async function scanCommissionUpgrades(limit=25,fetchProducts=fetchShopeeP
   const offers=await sql`SELECT id,title,external_id,price FROM offers
     WHERE status='published' AND LOWER(TRIM(marketplace))='shopee' AND external_id ~ '^[0-9]+$'
     ORDER BY id DESC LIMIT ${Math.min(60,Math.max(1,limit))} OFFSET ${Math.max(0,Math.floor(offset))}`;
+  // Anúncios que já são de outra oferta não são sugeridos (evita duas ofertas no mesmo item).
+  const taken=new Set((await sql`SELECT external_id FROM offers WHERE LOWER(TRIM(marketplace))='shopee' AND external_id IS NOT NULL`).map((r:any)=>String(r.external_id)));
   let checked=0,found=0,failed=0;const results:any[]=[];
   for(const o of offers as any[]){
     checked++;
@@ -72,7 +77,7 @@ export async function scanCommissionUpgrades(limit=25,fetchProducts=fetchShopeeP
       const cur:Current={itemId:String(o.external_id),title:String(o.title),rate:curNode?num(curNode.commissionRate):null,price:Number(o.price)};
       const kw=searchKeyword(String(o.title));
       const cands=kw?((await fetchProducts(1,40,kw))?.nodes||[]).map(toListing):[];
-      const best=pickBetterListing(cur,cands);
+      const best=pickBetterListing(cur,cands,RULES,taken);
       if(best){
         found++;
         await sql`INSERT INTO offer_commission_suggestions(offer_id,current_item,current_rate,current_price,item_id,title,rate,price,sales,rating,shop,image_url,product_url,gain,status,created_at)
