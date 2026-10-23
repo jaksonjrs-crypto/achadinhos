@@ -59,11 +59,11 @@ export async function ensureSuggestionTable(){
 }
 
 // Varre as ofertas Shopee publicadas e grava sugestões (não altera ofertas).
-export async function scanCommissionUpgrades(limit=25,fetchProducts=fetchShopeeProducts){
+export async function scanCommissionUpgrades(limit=25,fetchProducts=fetchShopeeProducts,offset=0){
   const sql=await ensureSuggestionTable();
   const offers=await sql`SELECT id,title,external_id,price FROM offers
     WHERE status='published' AND LOWER(TRIM(marketplace))='shopee' AND external_id ~ '^[0-9]+$'
-    ORDER BY id DESC LIMIT ${Math.min(60,Math.max(1,limit))}`;
+    ORDER BY id DESC LIMIT ${Math.min(60,Math.max(1,limit))} OFFSET ${Math.max(0,Math.floor(offset))}`;
   let checked=0,found=0,failed=0;const results:any[]=[];
   for(const o of offers as any[]){
     checked++;

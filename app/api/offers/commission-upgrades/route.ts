@@ -11,7 +11,7 @@ export async function GET(){
 export async function POST(req:Request){
   try{
     const body=await req.json().catch(()=>({}));const action=String(body.action||'scan');
-    if(action==='scan')return NextResponse.json({ok:true,...await scanCommissionUpgrades(Number(body.limit)||25)});
+    if(action==='scan')return NextResponse.json({ok:true,...await scanCommissionUpgrades(Number(body.limit)||25,undefined,Number(body.offset)||0)});
     const id=Number(body.offerId);
     if(!Number.isSafeInteger(id)||id<=0)return NextResponse.json({ok:false,error:"Oferta inválida."},{status:400});
     if(action==='apply')return NextResponse.json({ok:true,...await applyCommissionUpgrade(id)});
