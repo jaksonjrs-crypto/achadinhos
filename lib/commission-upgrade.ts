@@ -109,7 +109,7 @@ export async function applyCommissionUpgrade(offerId:number){
   const converted=await convertShopeeOffer(String(s.item_id),String(s.product_url),'VITRINECOMISSAO2026');
   const old:any=(await sql`SELECT affiliate_url,external_id FROM offers WHERE id=${offerId} LIMIT 1`)[0];
   await sql.transaction([
-    sql`UPDATE offers SET external_id=${converted.itemId},affiliate_url=${converted.link},price=${Number(s.price)},
+    sql`UPDATE offers SET external_id=${converted.itemId},affiliate_url=${converted.link},price=${Number(s.price)},original_price=NULL,
       image_url=COALESCE(NULLIF(${s.image_url},''),image_url),affiliate_status='verified',sync_status='ok',last_synced_at=NOW(),updated_at=NOW() WHERE id=${offerId}`,
     sql`DELETE FROM offer_channel_links WHERE offer_id=${offerId}`,
     sql`UPDATE offer_commission_suggestions SET status='applied' WHERE offer_id=${offerId}`,
