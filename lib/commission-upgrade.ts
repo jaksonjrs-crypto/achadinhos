@@ -119,6 +119,24 @@ export async function applyCommissionUpgrade(offerId:number){
   return {offerId,itemId:converted.itemId,link:converted.link};
 }
 
+// v3.6.10: troca manual de anúncio (ex.: o atual esgotou). Mantém o ID da oferta e gera link verificado.
+export async function replaceListing(offerId:number,itemId:string,fetchProducts=fetchShopeeProducts){
+  if(!/^\d+$/.test(itemId))throw Error('ID do anúncio inválido.');
+  const sql=await ensureSuggestionTable();
+  const o:any=(await sql`SELECT id,external_id,price FROM offers WHERE id=${offerId} AND LOWER(TRIM(marketplace))='shopee' LIMIT 1`)[0];
+  if(!o)throw Error('Oferta Shopee não encontrada.');
+  const used=await sql`SELECT id FROM offers WHERE external_id=${itemId} AND id<>${offerId} AND LOWER(TRIM(marketplace))='shopee' LIMIT 1`;
+  if(used.length)throw Error(`Esse anúncio já é da oferta #${used[0].id}.`);
+  const node=(await fetchProducts(1,1,undefined,itemId))?.nodes?.[0];
+  if(!node||String(node.itemId)!==itemId)throw Error('Anúncio não encontrado na API de afiliados.');
+  const c=toListing(node);
+  await sql`INSERT INTO offer_commission_suggestions(offer_id,current_item,current_rate,current_price,item_id,title,rate,price,sales,rating,shop,image_url,product_url,gain,status,created_at)
+    VALUES(${offerId},${String(o.external_id||'')},${null},${Number(o.price)},${c.itemId},${c.title},${c.rate},${c.price},${c.sales},${c.rating},${c.shop},${c.image},${c.link},${0},'open',NOW())
+    ON CONFLICT(offer_id) DO UPDATE SET current_item=EXCLUDED.current_item,current_rate=NULL,current_price=EXCLUDED.current_price,item_id=EXCLUDED.item_id,title=EXCLUDED.title,
+      rate=EXCLUDED.rate,price=EXCLUDED.price,sales=EXCLUDED.sales,rating=EXCLUDED.rating,shop=EXCLUDED.shop,image_url=EXCLUDED.image_url,product_url=EXCLUDED.product_url,gain=0,status='open',created_at=NOW()`;
+  return {...await applyCommissionUpgrade(offerId),rate:c.rate,price:c.price,shop:c.shop};
+}
+
 export async function dismissSuggestion(offerId:number){
   const sql=await ensureSuggestionTable();
   await sql`UPDATE offer_commission_suggestions SET status='dismissed' WHERE offer_id=${offerId}`;
