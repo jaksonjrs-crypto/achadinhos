@@ -541,3 +541,6 @@
 /* v3.6.1 — instalar o app da Vitrine */
 .installApp{margin:0;padding:10px 12px 18px;text-align:center;background:#eaf7f3;color:#133e40;font-size:13px;line-height:1.45}
 .installApp button{background:var(--orange);color:#fff;border-radius:999px;padding:10px 18px;font-weight:800}
+
+/* v3.6.8 comparar comissões */
+.commissionUpgrades{margin:10px 0}.upgradeList{list-style:none;padding:0;margin:8px 0;display:grid;gap:8px}.upgradeList li{display:grid;grid-template-columns:48px 1fr auto auto;gap:10px;align-items:center;padding:8px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}.upgradeList img{width:48px;height:48px;object-fit:cover;border-radius:8px}.upgradeList small{display:block;color:#475569}@media(max-width:640px){.upgradeList li{grid-template-columns:40px 1fr}.upgradeList li button{grid-column:span 1}}

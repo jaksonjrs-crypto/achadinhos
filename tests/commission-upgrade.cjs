@@ -1,0 +1,22 @@
+const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),ts=require('typescript'),Module=require('module');
+const root=path.resolve(__dirname,'..');
+function load(file,mocks={}){const f=path.join(root,file);const m=new Module(f);m.filename=f;m.paths=Module._nodeModulePaths(root);const r=m.require.bind(m);m.require=id=>id in mocks?mocks[id]:r(id);
+ m._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,f);return m.exports;}
+const links=load('lib/shopee-links.ts');
+const c=load('lib/commission-upgrade.ts',{'./db':{db:()=>{throw Error('no db')}},'./shopee-affiliate':{fetchShopeeProducts:async()=>({nodes:[]})},'./affiliate-registry':{convertShopeeOffer:async()=>{throw Error('no')}},'./shopee-links':links});
+const cur={itemId:'1',title:'Patins Infantil 4 Rodas Com Luz De Led Com Kit Proteção',rate:0.17,price:159.55};
+const L=(o)=>({itemId:'2',title:'patins infantil juvenil 4 rodas com luz de led com kit proteção',rate:0.26,price:161.5,sales:1030,rating:4.9,shop:'leao',image:'',link:'https://shopee.com.br/product/9/2',...o});
+const best=c.pickBetterListing(cur,[L({})]);
+assert.equal(best.itemId,'2');assert.ok(best.gain>13&&best.gain<15,'gain ~ R$14,86');
+assert.equal(c.pickBetterListing(cur,[L({rating:4.2})]),null,'low rating');
+assert.equal(c.pickBetterListing(cur,[L({sales:10})]),null,'few sales');
+assert.equal(c.pickBetterListing(cur,[L({price:260})]),null,'price far away');
+assert.equal(c.pickBetterListing(cur,[L({title:'Caneca misturadora elétrica 380ml'})]),null,'different product');
+assert.equal(c.pickBetterListing(cur,[L({rate:0.18})]),null,'gain under 15%');
+assert.equal(c.pickBetterListing(cur,[L({itemId:'1'})]),null,'same listing');
+assert.equal(c.pickBetterListing({...cur,rate:null},[L({})]),null,'unknown current rate');
+const two=c.pickBetterListing(cur,[L({itemId:'3',rate:0.21}),L({})]);assert.equal(two.itemId,'2','highest gain wins');
+assert.equal(c.searchKeyword('Patins Infantil 4 Rodas Com Luz De Led Com Kit'),'patins infantil rodas luz led');
+const t=c.toListing({itemId:5,productName:'X',commissionRate:'0.21',price:'33.80',sales:877,ratingStar:'4.8',shopName:'S',imageUrl:'i',shopId:7,productLink:'https://shopee.com.br/product/7/5'});
+assert.equal(t.rate,0.21);assert.equal(t.price,33.8);assert.equal(t.itemId,'5');
+console.log('commission-upgrade: ok');

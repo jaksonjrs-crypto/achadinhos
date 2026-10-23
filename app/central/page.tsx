@@ -8,6 +8,7 @@ import RepairLinks from './RepairLinks';
 import {filterOffers} from '@/lib/offer-filters';
 import BatchPublishButton from "./BatchPublishButton";
 import SyncCatalogButton from "./SyncCatalogButton";
+import CommissionUpgrades from "./CommissionUpgrades";
 import { APP_VERSION } from "@/lib/version";
 import { listAllOffers } from "@/lib/offers";
 export const dynamic="force-dynamic";
@@ -94,6 +95,7 @@ export default async function Central({searchParams}:{searchParams:Promise<Recor
     <details className="newOfferBox"><summary>Como destacar produtos na página inicial</summary><p>Em cada oferta publicada, abra “Destaque na inicial”, escolha 5, 10, 15, 20 ou 30 dias e salve. Ative a seção em Configuração da Vitrine. O prazo começa no salvamento; renovar reinicia a contagem. Os destaques aparecem em uma seção extra no topo. Abaixo, todos os produtos ativos continuam visíveis com paginação, mesmo sem destaques. Ao vencer ou retirar, o produto sai apenas da seção de destaques.</p></details>
     <RepairLinks/>
     <div className="centralActionBar"><SyncCatalogButton/><BatchPublishButton /></div>
+    <CommissionUpgrades/>
     <div className="contentWorkflowActions"><a className="button" href="/divulgacao">Abrir fila de divulgação</a></div>
     <div className="noticeBox"><b>Autopiloto:</b> ofertas completas são publicadas automaticamente. Esta Central fica para catálogo, correções e exceções.</div>
     <div className="sectionTitle centralTitle"><div><span className="eyebrow">CATÁLOGO INTERNO</span><h2>Ofertas</h2></div><span>{offers.length} resultado{offers.length===1?"":"s"}</span></div>
